@@ -1,1 +1,4 @@
 John Conway's Game of Life simulation written by Dominic Zirbel (zirbinator) in Java.
+
+When running the executable bit jar file, the resources (namely, the images folder)
+must be placed in the same folder.

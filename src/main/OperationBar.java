@@ -18,7 +18,7 @@ public class OperationBar
 	private Information info;
 	private int opBarIndex;
 	
-	private Rectangle bounds;
+	public Rectangle bounds;
 	private Rectangle minimizeBounds;
 	private Rectangle closeBounds;
 	

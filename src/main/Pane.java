@@ -254,12 +254,34 @@ public class Pane implements Runnable
 		beingDragged = false;
 	}
 	
+	/**
+	 * Called by the Listener when the left mouse button (BUTTON1) has been held and moved.
+	 * If the pane is being dragged - that is, if the original mouse press was within the bounds of the dots - it is moved to the new mouse location.
+	 * The bounds are adjusted to make sure that they are not off the screen or colliding with the operation bar.
+	 * Depending on the path made into the operation bar, determined by the previous x,y coordinates, the pane is allowed to slide
+	 *  in one direction along the side of the operation bar rather than simply "stick" to the operation bar.
+	 * 
+	 * @param e - the MouseEvent that triggered this call
+	 */
 	public void mouseDragged(MouseEvent e)
 	{
 		if (beingDragged)
 		{
+			int prevX = x;
+			int prevY = y;
 			x = e.getX() - dragOrigin.x;
 			y = e.getY() - dragOrigin.y;
+			if (x + width > info.screen.width - info.opBar.bounds.width && y < info.opBar.bounds.height)
+			{
+				if (prevX + width > info.screen.width - info.opBar.bounds.width)
+				{
+					y = info.opBar.bounds.height;
+				}
+				if (prevY < info.opBar.bounds.height)
+				{
+					x = info.screen.width - info.opBar.bounds.width - width;
+				}
+			}
 			if (x < 0)
 			{
 				x = 0;
@@ -276,6 +298,7 @@ public class Pane implements Runnable
 			{
 				y = info.screen.height - height;
 			}
+			
 			setRectangles();
 		}
 	}
@@ -288,7 +311,7 @@ public class Pane implements Runnable
 	 */
 	public boolean consumed(MouseEvent e)
 	{
-		if (bounds.contains(e.getPoint()))
+		if (bounds.contains(e.getPoint()) || beingDragged)
 		{
 			return true;
 		}

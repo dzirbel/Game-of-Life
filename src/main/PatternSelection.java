@@ -197,7 +197,7 @@ public class PatternSelection implements Runnable
 	public PatternSelection(Information info)
 	{
 		this.info = info;
-		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON1);
+		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON_ALL);
 		arrowIndex = info.imageLoader.add("images/arrow.png", "arrow", Transparency.TRANSLUCENT);
 		
 		arrowRO = new RollOver(new Rectangle(), info);
@@ -380,107 +380,114 @@ public class PatternSelection implements Runnable
 	}
 	
 	/**
-	 * Called by the Listener when the left mouse button (BUTTON1) has been pressed.
+	 * Called by the Listener when any mouse button has been pressed.
 	 * If the click originated within the selection area and the PatternSelection is visible, 
 	 */
 	public void mousePressed(MouseEvent e)
 	{
 		if (!info.pane.consumed(e) && !info.opBar.consumed(e))
 		{
-			if (selectionArea.contains(e.getPoint()) && visible)
+			if (e.getButton() == MouseEvent.BUTTON1)
 			{
-				if (blockRO.bounds.contains(e.getPoint()))
+				if (selectionArea.contains(e.getPoint()) && visible)
 				{
-					selected = block.clone();
-				}
-				else if (beehiveRO.bounds.contains(e.getPoint()))
-				{
-					selected = beehive.clone();
-				}
-				else if (loafRO.bounds.contains(e.getPoint()))
-				{
-					selected = loaf.clone();
-				}
-				else if (boatRO.bounds.contains(e.getPoint()))
-				{
-					selected = boat.clone();
-				}
-				else if (blinkerRO.bounds.contains(e.getPoint()))
-				{
-					selected = blinker.clone();
-				}
-				else if (toadRO.bounds.contains(e.getPoint()))
-				{
-					selected = toad.clone();
-				}
-				else if (beaconRO.bounds.contains(e.getPoint()))
-				{
-					selected = beacon.clone();
-				}
-				else if (pulsarRO.bounds.contains(e.getPoint()))
-				{
-					selected = pulsar.clone();
-				}
-				else if (gliderRO.bounds.contains(e.getPoint()))
-				{
-					selected = glider.clone();
-				}
-				else if (lightWeightRO.bounds.contains(e.getPoint()))
-				{
-					selected = lightWeight.clone();
-				}
-				else if (mediumWeightRO.bounds.contains(e.getPoint()))
-				{
-					selected = mediumWeight.clone();
-				}
-				else if (heavyWeightRO.bounds.contains(e.getPoint()))
-				{
-					selected = heavyWeight.clone();
-				}
-				else if (queenBeeRO.bounds.contains(e.getPoint()))
-				{
-					selected = queenBee.clone();
-				}
-				else if (gosperGunRO.bounds.contains(e.getPoint()))
-				{
-					selected = gosperGun.clone();
-				}
-				else if (rpentominoRO.bounds.contains(e.getPoint()))
-				{
-					selected = rpentomino.clone();
-				}
-				else if (dieHardRO.bounds.contains(e.getPoint()))
-				{
-					selected = dieHard.clone();
-				}
-				else if (acornRO.bounds.contains(e.getPoint()))
-				{
-					selected = acorn.clone();
-				}
-				else
-				{
-					selected = null;
-				}
-				if (selected != null)
-				{
-					selected.setSize((int)(selected.width*info.window.zoom), (int)(selected.height*info.window.zoom));
-					selected.generateFullSizeImage();
-				}
-			}
-			else if (selected != null)
-			{
-				Point mouseCell = info.window.mouseCell();
-				for (int x = 0; x < selected.width; x++)
-				{
-					for (int y = 0; y < selected.height; y++)
+					if (blockRO.bounds.contains(e.getPoint()))
 					{
-						try
-						{
-							info.map.map[x + mouseCell.x][y + mouseCell.y] = selected.pattern[y][x];
-						}
-						catch (IndexOutOfBoundsException ex) { System.out.println("!"); }
+						selected = block.clone();
+					}
+					else if (beehiveRO.bounds.contains(e.getPoint()))
+					{
+						selected = beehive.clone();
+					}
+					else if (loafRO.bounds.contains(e.getPoint()))
+					{
+						selected = loaf.clone();
+					}
+					else if (boatRO.bounds.contains(e.getPoint()))
+					{
+						selected = boat.clone();
+					}
+					else if (blinkerRO.bounds.contains(e.getPoint()))
+					{
+						selected = blinker.clone();
+					}
+					else if (toadRO.bounds.contains(e.getPoint()))
+					{
+						selected = toad.clone();
+					}
+					else if (beaconRO.bounds.contains(e.getPoint()))
+					{
+						selected = beacon.clone();
+					}
+					else if (pulsarRO.bounds.contains(e.getPoint()))
+					{
+						selected = pulsar.clone();
+					}
+					else if (gliderRO.bounds.contains(e.getPoint()))
+					{
+						selected = glider.clone();
+					}
+					else if (lightWeightRO.bounds.contains(e.getPoint()))
+					{
+						selected = lightWeight.clone();
+					}
+					else if (mediumWeightRO.bounds.contains(e.getPoint()))
+					{
+						selected = mediumWeight.clone();
+					}
+					else if (heavyWeightRO.bounds.contains(e.getPoint()))
+					{
+						selected = heavyWeight.clone();
+					}
+					else if (queenBeeRO.bounds.contains(e.getPoint()))
+					{
+						selected = queenBee.clone();
+					}
+					else if (gosperGunRO.bounds.contains(e.getPoint()))
+					{
+						selected = gosperGun.clone();
+					}
+					else if (rpentominoRO.bounds.contains(e.getPoint()))
+					{
+						selected = rpentomino.clone();
+					}
+					else if (dieHardRO.bounds.contains(e.getPoint()))
+					{
+						selected = dieHard.clone();
+					}
+					else if (acornRO.bounds.contains(e.getPoint()))
+					{
+						selected = acorn.clone();
+					}
+					else
+					{
+						selected = null;
+					}
+					if (selected != null)
+					{
+						selected.setSize((int)(selected.width*info.window.zoom), (int)(selected.height*info.window.zoom));
+						selected.generateFullSizeImage();
 					}
 				}
+				else if (selected != null)
+				{
+					Point mouseCell = info.window.mouseCell();
+					for (int x = 0; x < selected.width; x++)
+					{
+						for (int y = 0; y < selected.height; y++)
+						{
+							try
+							{
+								info.map.map[x + mouseCell.x][y + mouseCell.y] = selected.pattern[y][x];
+							}
+							catch (IndexOutOfBoundsException ex) { System.out.println("!"); }
+						}
+					}
+				}
+			}
+			else if (e.getButton() == MouseEvent.BUTTON3)
+			{
+				selected = null;
 			}
 		}
 		else

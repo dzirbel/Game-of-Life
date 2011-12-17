@@ -77,8 +77,12 @@ public class Window
 	 */
 	public void zoomIn()
 	{
-		System.out.println("!");
 		zoom = Math.min(zoom + zoomSpeed, maxZoom);
+		if (info.pane.selector.selected != null)
+		{
+			info.pane.selector.selected.setSize((int)(info.pane.selector.selected.width*zoom), (int)(info.pane.selector.selected.height*zoom));
+			info.pane.selector.selected.generateFullSizeImage();
+		}
 	}
 	
 	/**
@@ -86,8 +90,12 @@ public class Window
 	 */
 	public void zoomOut()
 	{
-		System.out.println("~");
 		zoom = Math.max(zoom - zoomSpeed, minZoom);
+		if (info.pane.selector.selected != null)
+		{
+			info.pane.selector.selected.setSize((int)(info.pane.selector.selected.width*zoom), (int)(info.pane.selector.selected.height*zoom));
+			info.pane.selector.selected.generateFullSizeImage();
+		}
 	}
 	
 	/**
@@ -229,9 +237,15 @@ class Panel extends JPanel
 	/**
 	 * Called during a typical drawing method, simply calls the Game of Life's draw method.
 	 * This allows for screenshots to be made with a conventional method.
+	 * At the beginning of the execution, a null reference is often made because this method is called before initialization is complete.
+	 * Thus, any NullPointerExceptions thrown (either because info or gameOfLife is null) are completely ignored.
 	 */
 	public void paintComponent(Graphics g)
 	{
-		info.gameOfLife.draw((Graphics2D)g);
+		try
+		{
+			info.gameOfLife.draw((Graphics2D)g);
+		}
+		catch (NullPointerException ex) { }
 	}
 }
