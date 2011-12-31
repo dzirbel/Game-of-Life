@@ -5,13 +5,17 @@ import graphics.ImageLoader;
 
 import io.Listener;
 
+import java.awt.Color;
 import java.awt.DisplayMode;
+import java.awt.Font;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Transparency;
 import java.awt.event.MouseEvent;
+
+import pattern.PatternFolder;
 
 /**
  * Creates a global information network through a set of global variables.
@@ -21,9 +25,27 @@ import java.awt.event.MouseEvent;
 public class Information
 {
 	/**
+	 * The standard light blue color to be used for text and other features.
+	 */
+	public static Color lightBlue = new Color(0, 163, 231);
+	/**
+	 * The ControlBar that controls minimization and closing via the mouse.
+	 */
+	public ControlBar controlBar;
+	
+	/**
 	 * The optimal DisplayMode found using the DisplayMonitor class.
 	 */
 	public DisplayMode displayMode;
+	
+	/**
+	 * The standard bold font.
+	 */
+	public static Font fontBold = new Font(Font.SANS_SERIF, Font.BOLD, 18);
+	/**
+	 * The standard plain font.
+	 */
+	public static Font fontPlain = new Font(Font.SANS_SERIF, Font.PLAIN, 18);
 	
 	/**
 	 * The main GameOfLife object that created this Information.
@@ -37,6 +59,10 @@ public class Information
 	 * The local monitor configuration's GraphicsEnvironment.
 	 */
 	public GraphicsEnvironment environment;
+	/**
+	 * The Grid object.
+	 */
+	public Grid grid;
 	
 	/**
 	 * The ImageLoader that handles all image loading and referencing.
@@ -58,15 +84,6 @@ public class Information
 	public Map map;
 	
 	/**
-	 * The OperationBar that controls minimization and closing via the mouse.
-	 */
-	public OperationBar opBar;
-	
-	/**
-	 * The Pane that constitutes the majority of the GUI.
-	 */
-	public Pane pane;
-	/**
 	 * The current location of the pointer on the screen.
 	 */
 	public Point mouse;
@@ -77,9 +94,9 @@ public class Information
 	public Rectangle screen;
 	
 	/**
-	 * The Window object.
+	 * The Toolbar that constitutes the majority of the GUI.
 	 */
-	public Window window;
+	public Toolbar toolbar;
 	
 	/**
 	 * Initializes this Information with the given GameOfLife.
@@ -105,16 +122,26 @@ public class Information
 		environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		device = environment.getDefaultScreenDevice();
 		displayMode = DisplayMonitor.getBestDisplayMode(device);
+		if (device.isDisplayChangeSupported())
+		{
+			device.setDisplayMode(displayMode);
+		}
 		screen = new Rectangle(0, 0, displayMode.getWidth(), displayMode.getHeight());
 		imageLoader = new ImageLoader(false);
 		imageLoader.add("images/selection.png", "selection", Transparency.TRANSLUCENT);
 		imageLoader.add("images/alive.png", "alive", Transparency.OPAQUE);
 		imageLoader.add("images/dead.png", "dead", Transparency.OPAQUE);
+		imageLoader.add("images/folderFront.png", "folderFront", Transparency.TRANSLUCENT);
+		imageLoader.add("images/folderBack.png", "folderBack", Transparency.TRANSLUCENT);
+		imageLoader.get("folderFront").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderFront").getWidth()),
+				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderFront").getHeight()));
+		imageLoader.get("folderBack").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderBack").getWidth()),
+				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderBack").getHeight()));
 		listener = new Listener();
-		pane = new Pane(this);
+		toolbar = new Toolbar(this);
 		map = new Map(400, 400, this);
-		window = new Window(this);
-		opBar = new OperationBar(this);
+		grid = new Grid(this);
+		controlBar = new ControlBar(this);
 		generation = 0;
 		listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_MOVED, 0);
 		listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_DRAGGED, 0);

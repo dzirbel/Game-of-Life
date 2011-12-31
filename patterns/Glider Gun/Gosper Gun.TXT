@@ -1,0 +1,11 @@
+fffffffffffffffffffffffftfffffffffff
+fffffffffffffffffffffftftfffffffffff
+ffffffffffffttffffffttfffffffffffftt
+ffffffffffftffftffffttfffffffffffftt
+ttfffffffftffffftfffttffffffffffffff
+ttfffffffftffftfttfffftftfffffffffff
+fffffffffftffffftffffffftfffffffffff
+ffffffffffftffftffffffffffffffffffff
+ffffffffffffttffffffffffffffffffffff
+###
+Gosper Glider Gun

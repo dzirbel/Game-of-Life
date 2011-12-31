@@ -46,7 +46,7 @@ public class SpeedBar
 		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseReleased", Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseDragged", Listener.TYPE_MOUSE_DRAGGED, 0);
-		bounds = new Rectangle(info.pane.x + 280, info.pane.y + 45, 100, 40);
+		bounds = new Rectangle(info.toolbar.x + 280, info.toolbar.y + 45, 100, 40);
 		minSliderX = 10;
 		maxSliderX = bounds.width - 10 - info.imageLoader.get(sliderIndex).getWidth();
 		sliderX = (minSliderX + maxSliderX)/2;
@@ -144,7 +144,7 @@ public class SpeedBar
 	 */
 	public void drawToImage(Graphics2D g)
 	{
-		info.imageLoader.get(sliderBarIndex).draw(bounds.x - info.pane.x, bounds.y - info.pane.y, bounds.width, bounds.height, g);
-		info.imageLoader.get(sliderIndex).draw(sliderBounds.x - info.pane.x, sliderBounds.y - info.pane.y, sliderBounds.width, sliderBounds.height, g);
+		info.imageLoader.get(sliderBarIndex).draw(bounds.x - info.toolbar.x, bounds.y - info.toolbar.y, bounds.width, bounds.height, g);
+		info.imageLoader.get(sliderIndex).draw(sliderBounds.x - info.toolbar.x, sliderBounds.y - info.toolbar.y, sliderBounds.width, sliderBounds.height, g);
 	}
 }

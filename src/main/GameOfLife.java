@@ -2,10 +2,15 @@ package main;
 
 import io.Listener;
 
+import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
+import java.awt.Image;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferStrategy;
+
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 /**
  * The main class that is run to run the Game of Life simulation.
@@ -14,21 +19,22 @@ import java.awt.image.BufferStrategy;
  */
 public class GameOfLife
 {
-	public boolean leftHeld = false;
-	public boolean rightHeld = false;
-	public boolean upHeld = false;
-	public boolean downHeld = false;
-	public boolean minusHeld = false;
-	public boolean plusHeld = false;
 	private BufferStrategy strategy;
 	
-	public int moveSpeed = 5;
+	private Image icon = new ImageIcon("images/icon.png").getImage();
 	private Information info;
+	private int drawLoops;					// number of drawing loops
+	private int longDrawLoops;				// times that rendering took over the period
 	
-	public Point mouse;
+	public JFrame frame;
+	
+	private static long period = 17;		// total time for the drawing cycle in ms
+	private long before;
+	private long sleepTime;
 	
 	public Thread mapThread;
-	public Thread paneThread;
+	public Thread toolbarThread;
+	public Thread gridThread;
 	
 	/**
 	 * Runs the simulation by creating a GameOfLife object and calling launch() and then run().
@@ -49,28 +55,60 @@ public class GameOfLife
 	{
 		info = new Information();
 		info.init(this);
+		
 		info.listener.requestNotification(this, "exit", Listener.TYPE_KEY_PRESSED, KeyEvent.VK_ESCAPE);
-		info.listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
-		info.listener.requestNotification(this, "keyReleased", Listener.TYPE_KEY_RELEASED, Listener.CODE_KEY_ALL);
+		
+		frame = new JFrame("Game of Life");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setIconImage(icon);
+		frame.setContentPane(new Panel(info));
+		frame.setUndecorated(true);
+		frame.setResizable(false);
+		frame.addKeyListener(info.listener);
+		frame.addMouseListener(info.listener);
+		frame.addMouseMotionListener(info.listener);
+		frame.addMouseWheelListener(info.listener);
+		info.device.setFullScreenWindow(frame);
+		frame.createBufferStrategy(2);
+		
 		mapThread = new Thread(info.map);
 		mapThread.start();
-		paneThread = new Thread(info.pane);
-		paneThread.start();
+		toolbarThread = new Thread(info.toolbar);
+		toolbarThread.start();
+		gridThread = new Thread(info.grid);
+		gridThread.start();
 	}
 	
 	/**
-	 * Runs the simulation by drawing and updating at the maximum speed without sleeping.
+	 * Runs the simulation by drawing and sleeping so that each draw cycle takes the preset period length of time.
+	 * If rendering took over the period, a warning message is printed to the console.
 	 */
 	public void run()
 	{
 		while (true)
 		{
-			strategy = info.window.frame.getBufferStrategy();
-			Graphics2D g = (Graphics2D)info.window.frame.getBufferStrategy().getDrawGraphics();
+			before = System.nanoTime();
+			strategy = frame.getBufferStrategy();
+			Graphics2D g = (Graphics2D)strategy.getDrawGraphics();
 			draw(g);
 			g.dispose();
 			strategy.show();
-			update();
+			sleepTime = period - (System.nanoTime() - before)/1000000;
+			if (sleepTime <= 0)
+			{
+				System.out.println("[WARNING] Rendering took over the allotted period by " + (-sleepTime) + " ms.");
+				sleepTime = 0;
+				longDrawLoops++;
+			}
+			else
+			{
+				try
+				{
+					Thread.sleep(sleepTime);
+				}
+				catch (InterruptedException ex) { }
+			}
+			drawLoops++;
 		}
 	}
 	
@@ -81,122 +119,9 @@ public class GameOfLife
 	 */
 	public void exit(KeyEvent event)
 	{
+		System.out.println(longDrawLoops + " [" + 100*((double)longDrawLoops)/((double)drawLoops) + 
+				"%] of the total number of drawing loops, " + drawLoops + ", took over the period.");
 		System.exit(0);
-	}
-	
-	/**
-	 * Called by the Listener when any key is pressed.
-	 * Updates the flags determining which of several critical keys are held.
-	 * 
-	 * @param e - the KeyEvent that triggered the call
-	 */
-	public void keyPressed(KeyEvent e)
-	{
-		if (e.getKeyCode() == KeyEvent.VK_UP)
-		{
-			upHeld = true;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_DOWN)
-		{
-			downHeld = true;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_RIGHT)
-		{
-			rightHeld = true;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_LEFT)
-		{
-			leftHeld = true;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_MINUS)
-		{
-			minusHeld = true;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS)
-		{
-			plusHeld = true;
-		}
-	}
-	
-	/**
-	 * Called by the Listener when any key is released.
-	 * Updates the flags determining which of several critical keys are held.
-	 * 
-	 * @param e - the KeyEvent that triggered the call
-	 */
-	public void keyReleased(KeyEvent e)
-	{
-		if (e.getKeyCode() == KeyEvent.VK_UP)
-		{
-			upHeld = false;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_DOWN)
-		{
-			downHeld = false;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_RIGHT)
-		{
-			rightHeld = false;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_LEFT)
-		{
-			leftHeld = false;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_MINUS)
-		{
-			minusHeld = false;
-		}
-		else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS)
-		{
-			plusHeld = false;
-		}
-	}
-	
-	/**
-	 * Updates the simulation by zooming or moving the window if necessary.
-	 */
-	public void update()
-	{
-		if (minusHeld && !plusHeld)
-		{
-			info.window.zoomOut();
-		}
-		if (plusHeld && !minusHeld)
-		{
-			info.window.zoomIn();
-		}
-		if (rightHeld && !leftHeld)
-		{
-			info.window.xMap += moveSpeed;
-			if (info.window.xMap + info.screen.width > info.map.width*info.window.zoom)
-			{
-				info.window.xMap = info.map.width*(int)info.window.zoom - info.screen.width;
-			}
-		}
-		if (leftHeld && !rightHeld)
-		{
-			info.window.xMap -= moveSpeed;
-			if (info.window.xMap < 0)
-			{
-				info.window.xMap = 0;
-			}
-		}
-		if (upHeld && !downHeld)
-		{
-			info.window.yMap -= moveSpeed;
-			if (info.window.yMap < 0)
-			{
-				info.window.yMap = 0;
-			}
-		}
-		if (downHeld && !upHeld)
-		{
-			info.window.yMap += moveSpeed;
-			if (info.window.yMap + info.screen.height > info.map.height*info.window.zoom)
-			{
-				info.window.yMap = info.map.height*(int)info.window.zoom - info.screen.height;
-			}
-		}
 	}
 	
 	/**
@@ -209,9 +134,46 @@ public class GameOfLife
 	 */
 	public void draw(Graphics2D g)
 	{
-		info.window.draw(g);
-		info.pane.draw(g);
-		info.pane.selector.draw(g);
-		info.opBar.draw(g);
+		info.grid.draw(g);
+		info.toolbar.draw(g);
+		info.toolbar.selector.draw(g);
+		info.controlBar.draw(g);
+	}
+}
+
+/**
+ * Allows for screenshots and screen recording to capture the screen by providing a more typical context in which to draw.
+ * 
+ * @author Dominic
+ */
+class Panel extends JPanel
+{
+	Information info;
+	
+	private static final long serialVersionUID = 1L;
+	
+	/**
+	 * Creates a new Panel with the given Information.
+	 * 
+	 * @param info - the current Information
+	 */
+	public Panel(Information info)
+	{
+		this.info = info;
+	}
+	
+	/**
+	 * Called during a typical drawing method, simply calls the Game of Life's draw method.
+	 * This allows for screenshots to be made with a conventional method.
+	 * At the beginning of the execution, a null reference is often made because this method is called before initialization is complete.
+	 * Thus, any NullPointerExceptions thrown (either because info or gameOfLife is null) are completely ignored.
+	 */
+	public void paintComponent(Graphics g)
+	{
+		try
+		{
+			info.gameOfLife.draw((Graphics2D)g);
+		}
+		catch (NullPointerException ex) { }
 	}
 }

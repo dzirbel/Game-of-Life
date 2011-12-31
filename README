@@ -1,4 +1,6 @@
 John Conway's Game of Life simulation written by Dominic Zirbel (zirbinator) in Java.
 
-When running the executable bit jar file, the resources (namely, the images folder)
-must be placed in the same folder.
+When running the executable bit jar file, the resources (namely, the images and patterns
+folders) must be placed in the same folder. Thus, the easiest way to run the program from
+git is to download the entire folder as a .zip file, extract it, and run the executable jar
+file (note: on some Linux systems, this file may have to be marked as executable bit).

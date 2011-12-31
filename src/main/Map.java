@@ -45,9 +45,9 @@ public class Map implements Runnable
 	{
 		while (true)
 		{
-			if (!info.pane.paused)
+			if (!info.toolbar.paused)
 			{
-				if (System.nanoTime() - timeLastGeneration > info.pane.speedBar.getPeriod() * 1000000)
+				if (System.nanoTime() - timeLastGeneration > info.toolbar.speedBar.getPeriod() * 1000000)
 				{
 					timeLastGeneration = System.nanoTime();
 					update();
@@ -156,10 +156,7 @@ public class Map implements Runnable
 		{
 			map[x][y] = alive;
 		}
-		catch (IndexOutOfBoundsException ex)
-		{
-			//ExceptionHandler.receive(ex, "Attempted to set the cell at " + x + ", " + y + " to (true=on, false=off) " + alive + ".");
-		}
+		catch (IndexOutOfBoundsException ex) { }
 	}
 	
 	/**
