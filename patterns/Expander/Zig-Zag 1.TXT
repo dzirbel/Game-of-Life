@@ -1,0 +1,8 @@
+fffffftf
+fffftftt
+fffftftf
+fffftfff
+fftfffff
+tftfffff
+###
+Zig-Zag 1

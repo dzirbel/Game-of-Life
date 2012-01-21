@@ -10,11 +10,15 @@ import java.awt.image.RescaleOp;
 /**
  * Represents the highlight that can be placed behind buttons and other objects on the screen.
  * A RollOver fades in as the mouse is moved over the object and then fades out after the mouse leaves.
+ * A RollOver also has the ability to "splash" - fade fully in and then fully out once.
  * 
  * @author Dominic
  */
 public class RollOver implements Runnable
 {
+	private boolean splashing = false;
+	private boolean splashingUp = false;
+	
 	private float[] scales = {1f, 1f, 1f, 1f};
 	private float[] offsets = new float[4];
 	private float alpha = 0f;
@@ -23,7 +27,7 @@ public class RollOver implements Runnable
 	private Information info;
 	private int selectionIndex;
 	
-	private long period = 20;
+	private static long period = 20;
 	
 	public Rectangle bounds;
 	private RescaleOp rescaler;
@@ -64,14 +68,44 @@ public class RollOver implements Runnable
 	 */
 	public void update()
 	{
-		if (bounds.contains(info.mouse))
+		if (splashing)
 		{
-			alpha = Math.min(alpha + alphaSpeed, 1f);
+			if (splashingUp)
+			{
+				alpha += alphaSpeed;
+				if (alpha > 1)
+				{
+					alpha = 1;
+					splashingUp = false;
+				}
+			}
+			else
+			{
+				alpha -= alphaSpeed;
+				if (alpha < 0)
+				{
+					alpha = 0;
+					splashing = false;
+				}
+			}
 		}
 		else
 		{
-			alpha = Math.max(alpha - alphaSpeed, 0f);
+			if (bounds.contains(info.mouse))
+			{
+				alpha = Math.min(alpha + alphaSpeed, 1f);
+			}
+			else
+			{
+				alpha = Math.max(alpha - alphaSpeed, 0f);
+			}
 		}
+	}
+	
+	public void splash()
+	{
+		splashing = true;
+		splashingUp = true;
 	}
 	
 	/**

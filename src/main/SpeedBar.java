@@ -110,6 +110,11 @@ public class SpeedBar
 		}
 	}
 	
+	public void adjustSpeed(int amount)
+	{
+		setSliderBounds(Math.min(maxSliderX + bounds.x, Math.max(minSliderX + bounds.x, bounds.x + sliderX + amount)), false);
+	}
+	
 	/**
 	 * Returns the current speed given by the slider.
 	 * This is an arbitrary value between minSpeed and maxSpeed.

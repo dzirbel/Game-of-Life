@@ -37,7 +37,9 @@ public class PatternSelector implements Runnable
 	private static float alphaSpeed = 0.05f;
 	
 	private Information info;
-	private static int buffer = 25;					// distance from the edges of the bounding box to the folders
+	private static int TOP_BUFFER = 30;					// distance from the top of the bounding box to the top of the folders
+	private static int BOTTOM_BUFFER = 20;				// distance from the bottom of the bounding box to the bottom of the folders
+	private static int SIDE_BUFFER = 25;				// distance between folders and other folders as well as the sides of the bounding box
 	private int arrowIndex;
 	public static final int TOOLBAR_MOVE = 1;
 	public static final int FOLDER_EXPAND = 2;
@@ -144,8 +146,8 @@ public class PatternSelector implements Runnable
 			int xLoc = 0;
 			for (int i = folders.size() - 1; i >= 0; i--)
 			{
-				xLoc += buffer + folders.get(i).width;
-				folders.get(i).setLocation(xLoc, buffer + (int)folders.get(i).height);
+				xLoc += SIDE_BUFFER + folders.get(i).width;
+				folders.get(i).setLocation(xLoc, BOTTOM_BUFFER + (int)folders.get(i).height);
 			}
 			
 			int height = PatternFolder.FOLDER_HEIGHT;
@@ -153,10 +155,10 @@ public class PatternSelector implements Runnable
 			{
 				height = (int)Math.max(height, folders.get(i).height);
 			}
-			height += 2*buffer;
+			height += TOP_BUFFER + BOTTOM_BUFFER;
 			bounds.height = height;
 			
-			int width = (folders.size() + 1)*buffer;
+			int width = (folders.size() + 1)*SIDE_BUFFER;
 			for (int i = 0; i < folders.size(); i++)
 			{
 				width += folders.get(i).width;
@@ -287,14 +289,15 @@ public class PatternSelector implements Runnable
 				else if (selected != null)
 				{
 					// not consumed by toolbar or control bar, not in bounds (or invisible), left mouse button = place selection
-					Point mouseCell = info.grid.mouseCell();
+					Point mouseCell = info.grid.getMouseTile();
 					for (int x = 0; x < selected.width; x++)
 					{
 						for (int y = 0; y < selected.height; y++)
 						{
+							info.grid.map.set(selected.pattern[y][x], mouseCell.x + x, mouseCell.y + y);
 							try
 							{
-								info.map.map[x + mouseCell.x][y + mouseCell.y] = selected.pattern[y][x];
+								//info.map.map[x + mouseCell.x][y + mouseCell.y] = selected.pattern[y][x];
 							}
 							catch (IndexOutOfBoundsException ex) { System.out.println("!"); }
 						}
@@ -366,9 +369,9 @@ public class PatternSelector implements Runnable
 		}
 		if (selected != null)
 		{
-			Point mouseCell = info.grid.mouseCell();
-			selected.img.draw((int)info.grid.zoom*mouseCell.x - (int)info.grid.xMap,
-					(int)info.grid.zoom*mouseCell.y - (int)info.grid.yMap, g);
+			Point mouseCell = info.grid.getMouseTile();
+			selected.img.draw((int)info.grid.toPixel(mouseCell.x - info.grid.xLoc),
+					(int)info.grid.toPixel(mouseCell.y - info.grid.yLoc), g);
 		}
 		
 		arrowTooltip.draw(g);

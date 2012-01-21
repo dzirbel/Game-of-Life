@@ -144,6 +144,8 @@ public class PatternFolder
 	 */
 	public void update()
 	{
+		tooltip.bounds.x = info.toolbar.selector.bounds.x + info.toolbar.selector.bounds.width - x;
+		tooltip.bounds.y = info.toolbar.selector.bounds.y + info.toolbar.selector.bounds.height - y;
 		if (changing)
 		{
 			long timeElapsed = (System.nanoTime() - lastUpdate)/1000000;	// ms
@@ -164,6 +166,7 @@ public class PatternFolder
 					width = expandedWidth;
 					height = expandedHeight;
 					names.bounds.height = names.expandedHeight;
+					names.bounds.y = (int)folderY + FOLDER_HEIGHT + MIDDLE_BUFFER;
 					changing = false;
 				}
 			}
@@ -228,7 +231,6 @@ public class PatternFolder
 	 */
 	public void expand(boolean expand)
 	{
-		expanded = expand;
 		if (expand)
 		{
 			folderXSpeed = folderXExpanded/expansionTime;							// px/ms
@@ -249,6 +251,7 @@ public class PatternFolder
 			changing = true;
 			lastUpdate = System.nanoTime();
 		}
+		expanded = expand;
 	}
 	
 	/**
