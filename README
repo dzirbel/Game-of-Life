@@ -1,6 +1,109 @@
-John Conway's Game of Life simulation written by Dominic Zirbel (zirbinator) in Java.
+John Conway's Game of Life simulation written by Dominic Zirbel (zirbinator) in Java. This software is provided freely and may be used commercially. I would appreciate any and all feedback and comments.
 
-When running the executable bit jar file, the resources (namely, the images and patterns
-folders) must be placed in the same folder. Thus, the easiest way to run the program from
-git is to download the entire folder as a .zip file, extract it, and run the executable jar
-file (note: on some Linux systems, this file may have to be marked as executable bit).
+Table of Contents:
+
+1. Running the Game of Life
+   1.1 Advanced Instructions
+2. The Grid
+   2.1 The Shift Key
+   2.2 The Control Key
+3. The Toolbar
+   3.1 The Simulation
+   3.2 Hotkeys
+4. Patterns
+   4.1 Creating Your Own Patterns
+5. Other
+   5.1 The Next Generation
+
+### 1. Running the Game of Life ###
+
+Running the Game of Life is simple. Simply download the compressed zip found at the github repository at https://github.com/zirbinator/Game-of-Life. Extract the folder. To run the
+Game of Life, double click the "Game_of_Life.jar" executable jar file. On some Linux systems,
+this file may have to be marked as executable bit before it can be run. Note that the
+resources (pattern and images folders) must be moved along with the jar file for it to run.
+
+1.1 Advanced Instructions
+
+If desired, the Game of Life can be run via the command-line and will print diagnostic
+information in the case of a crash. Navigate to the folder containing the jar and run it with
+Java, typically as such: 'java -jar Game_of_Life.jar' [without quotes]. In addition to any
+exceptions thrown at runtime, warning messages will be printed if rendering takes longer
+than the expected time. Do not be surprised if a few of the messages appear. When the program
+is exited, a total count of the number of times that the expected render time was exceeded
+will print, along with a percentage of the total render cycles. If this number is above 50%,
+you may experience a slower environment.
+
+### 2. The Grid ###
+
+The simulation takes place on "The Grid." The black rectangles constitute the playing field
+for the cellular automation. Alive cells are green and dead cells are black. Cells can be
+made alive or dead by left clicking and dragging. Clicking a living cell will make it dead
+(and all cells that are then dragged over) and clicking a dead cell will make it become alive
+(along with all other cells dragged over). The Grid is dynamically expanding, meaning that
+it has no boundaries, but will continue on forever. The area of the Grid viewed can be moved
+with the arrow keys. Additionally, the grid can be zoomed with the plus (+) or minus (-)
+keys. When zooming, the cell hovered over by the mouse will be retained, so that zooming
+will be centered around the mouse. When zoomed out very far, the grid lines will disappear so that the smaller sized cells can be seen.
+
+2.1 The Shift Key
+
+Holding the shift key will change the environment in terms of movement. With the shift key
+held, the up and down arrow keys will zoom in and out rather than move and the left and right
+arrows will do nothing. Clicking the mouse will have no effect, but dragging will pan around
+the Grid. The plus (+) and minus (-) keys have no effect when the shift key is held.
+
+2.2 The Control Key
+
+The control key also has an effect when held. Pressing the arrow keys with control down will move the cursor one cell in the appropriate direction, and make the cell to which the cursor moves alive. This can be useful for counting out a line of a certain number of cells or experimenting with straight lines. The mouse's use is not affected when control is held, but the plus (+) and minus (-) keys will again have no effect.
+
+### 3. The Toolbar ###
+
+The primary aspect of the user interface (UI) is the toolbar, which will first appear as a
+gray oval in the bottom-left corner of the screen. The toolbar has three large buttons, which act as the primary way of manipulating the simulation. First, the play/pause button will play and pause the simulation, which will run automatically when playing. The next button will simulate the next generation. Finally, the clear button (broom) will clear the simulation and reset the generation count to 0. Which moves us to the generation counter, above and to the right of the clear button. This counter will count the number of generations run in the current simulation (since the clear button was last pressed or the program was started). Below the counter is the speed bar. Dragging the slider will adjust the speed at which the simulation runs, right will run it faster and left will slow it down. Dragging four dots will move the location of the Toolbar.
+
+3.1 The Simulation
+
+You may be asking yourself, what exactly is the Game of Life? In the catastrophic event that both Google and Wikipedia are nonfunctional, I will provide a small explanation here. Each generation, each cell is either alive or dead and the state of the cell in the next generation depends on its state in the current generation and the number of neighbors (including diagonal) that are adjacent to it. The rules are below:
+
+If the cell is alive, it will remain alive if it has 2 or 3 neighbors.
+If the cell is dead, it will become alive if it has exactly 3 neighbors.
+
+As you will see with just a little experementation, these two simple rules can produce very complicated situations (and Turing complete, to boot!)
+
+3.2 Hotkeys
+
+If you don't feel like pressing buttons, there are always options! The tooltips that appear when you hover over various buttons give the hotkey to press (control not required) in brackets, but here they are for you anyway:
+
+Play/Pause: P
+Next Generation: N
+Clear: C
+
+Not very difficult, but they can be very useful.
+
+### 4. Patterns ###
+
+I'm sure you're just having a jolly time drawing pictures on the screen and seeing them blow up (who wouldn't?) but some very smart people have come up with ways to have even more fun. I have a fairly small selection of some patterns that you can put right into the Grid. The Pattern Selector can be accessed with the small arrow on the left of the Toolbar. Inside the Pattern Selector are a bunch of folders. Click on the folders to expand them, and then pick a pattern from the list, click on it and (dragging not necessary) move it into the Grid, and then click one more time to place it (right click to get rid of the pattern following your mouse). I have the patterns that I put in organized by function. Stable patterns are, of course, stable, sometimes called "still life". Spaceship patterns move without leaving anything behind (yes, I know that the Queen Bee doesn't actually go anywhere fast without some help). Oscillator patterns switch through a series of states. Exploders start small but seem like they "explode", though they will eventually become stable(ish). Finally, Expanders will get bigger forever, whether by shooting off spaceships or pure awesomeness (aka the Spacefiller).
+
+4.1 Creating Your Own Patterns
+
+Sooner or later, you'll get bored with the few patterns that I put in and, lucky for you, you can make your own. The way you do it isn't great right now, but it's something. Go into the patterns folder and you'll see a bunch of folders strangely names exactly the same as the pattern folders you see in the program. Inside of them are the data files corresponding to the actual patterns, saved as .txt files. You can create your own folders and rename mine, as well as create/rename/delete patterns. Inside the patterns, as you can see in any of my patterns, is a rectangle of living/dead cells. This is where your pattern goes, with living cells 't' and dead cells 'f'. After that, on a new line, comes a break (###) and then, on another line, the "expanded name" of your pattern. Usually this will be the same as the name of the pattern that you have to give the file, but if your pattern has a wicked long name, put an abbreviation for the file name and the full thing here; the expanded name shows up in a tooltip when you hover the mouse over the shorter name. When you start the Game of Life again, you'll see your patterns right along with mine, if any of them are left.
+
+### 5. Other ###
+
+There a couple other things about my program you may want to know. First, the control bar in the top right allows you to minimize and close the program. The escape key will also close it.
+
+5.1 The Next Generation
+
+I do have plans for the future. Right now my highest priority is to overhaul the UI and give a ton more tools that should be extremely useful but not too hard to make. I'm looking into a tabbed UI, but don't quite have the graphical design skills to pull it off, so we'll see what happens. Here's a complete list of features that I want to add, mostly sorted by precedence:
+
+1. selection boxes (drag the mouse to select some times and do something with them)
+2. saving patterns from the program (save the selected tiles into a pattern)
+3. rotate/reflect (rotate or reflect the selection)
+4. cut/copy/paste (cut, copy, or paste the selection)
+5. zombie cells (some cells are always dead or alive)
+6. save as a video (save a sequence as an animate gif or mpeg)
+7. time-traveling (move to previous generations)
+8. intense simulation (simulate a given number of generations later, and just skip to that)\
+9. basic drawing tools (rectangles, ovals, etc.)
+
+Well there you have it! If you like my work, please tell what you like and, even better don't like! My email is zirbinator@gmail.com, and I run a blog where I mostly discuss this program (at the moment, at least) at http://dominiczirbel.blogspot.com/. It's called The Hacker Imperialist. If you don't know how this file got on your computer, my guess would be that it's from my github project at https://github.com/zirbinator/Game-of-Life.

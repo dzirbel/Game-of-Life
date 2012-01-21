@@ -8,6 +8,7 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Transparency;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.RescaleOp;
@@ -33,8 +34,8 @@ public class Toolbar implements Runnable
 	
 	private float[] scales = {1f, 1f, 1f, 1f};
 	private float[] offsets = new float[4];
-	private float playAlpha = 0f;
-	private float pauseAlpha = 1f;
+	private float playAlpha = 1f;
+	private float pauseAlpha = 0f;
 	private float fadeSpeed = 0.033f;
 	private float paneAlpha = 1f;
 	private float paneFadeSpeed = 0.025f;
@@ -100,6 +101,7 @@ public class Toolbar implements Runnable
 		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseReleased", Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseDragged", Listener.TYPE_MOUSE_DRAGGED, Listener.CODE_BUTTON1);
+		info.listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
 		toolbarImageIndex = info.imageLoader.add("images/toolbar.png", "pane", Transparency.TRANSLUCENT);
 		dotsImageIndex = info.imageLoader.add("images/dots.png", "dots", Transparency.TRANSLUCENT);
 		nextImageIndex = info.imageLoader.add("images/next.png", "next", Transparency.TRANSLUCENT);
@@ -121,9 +123,9 @@ public class Toolbar implements Runnable
 		clearRO = new RollOver(new Rectangle(), info);
 		dotsRO = new RollOver(new Rectangle(), info);
 		
-		playTooltip = new Tooltip(playBounds, "Play/Pause", info);
-		nextTooltip = new Tooltip(nextBounds, "Next Generation", info);
-		clearTooltip = new Tooltip(clearBounds, "Clear the Grid", info);
+		playTooltip = new Tooltip(playBounds, "Play/Pause [P]", info);
+		nextTooltip = new Tooltip(nextBounds, "Next Generation [N]", info);
+		clearTooltip = new Tooltip(clearBounds, "Clear the Grid [C]", info);
 		dotsTooltip = new Tooltip(dotsBounds, "Drag to Move the Toolbar", info);
 		
 		setBounds();
@@ -162,7 +164,7 @@ public class Toolbar implements Runnable
 				info.imageLoader.get(playImageIndex).getHeight());
 		
 		dotsBounds = new Rectangle(
-				x + 17*width/20 - info.imageLoader.get(dotsImageIndex).getWidth()/2,
+				x + 13*width/15 - info.imageLoader.get(dotsImageIndex).getWidth()/2,
 				y + 7*height/24 - info.imageLoader.get(dotsImageIndex).getHeight()/2,
 				info.imageLoader.get(dotsImageIndex).getWidth(),
 				info.imageLoader.get(dotsImageIndex).getHeight());
@@ -218,13 +220,13 @@ public class Toolbar implements Runnable
 	{
 		if (paused)
 		{
-			pauseAlpha = Math.min(pauseAlpha + fadeSpeed, 1f);
-			playAlpha = Math.max(playAlpha - fadeSpeed, 0f);
+			pauseAlpha = Math.max(pauseAlpha - fadeSpeed, 0f);
+			playAlpha = Math.min(playAlpha + fadeSpeed, 1f);
 		}
 		else
 		{
-			playAlpha = Math.min(playAlpha + fadeSpeed, 1f);
-			pauseAlpha = Math.max(pauseAlpha - fadeSpeed, 0f);
+			playAlpha = Math.max(playAlpha - fadeSpeed, 0f);
+			pauseAlpha = Math.min(pauseAlpha + fadeSpeed, 1f);
 		}
 		if (beingDragged)
 		{
@@ -253,11 +255,11 @@ public class Toolbar implements Runnable
 			}
 			else if (nextBounds.contains(e.getX(), e.getY()))
 			{
-				info.map.update();
+				info.grid.map.update();
 			}
 			else if (clearBounds.contains(e.getX(), e.getY()))
 			{
-				info.map.clear();
+				info.grid.map.clear();
 			}
 			else if (dotsBounds.contains(e.getX(), e.getY()))
 			{
@@ -327,6 +329,33 @@ public class Toolbar implements Runnable
 			
 			dotsTooltip.location.x += x - prevX;
 			dotsTooltip.location.y += y - prevY;
+		}
+	}
+	
+	public void keyPressed(KeyEvent e)
+	{
+		if (e.getKeyCode() == KeyEvent.VK_P)
+		{
+			paused = !paused;
+			playRO.splash();
+		}
+		else if (e.getKeyCode() == KeyEvent.VK_N)
+		{
+			info.grid.map.update();
+			nextRO.splash();
+		}
+		else if (e.getKeyCode() == KeyEvent.VK_C)
+		{
+			info.grid.map.clear();
+			clearRO.splash();
+		}
+		else if (e.getKeyCode() == KeyEvent.VK_COMMA)
+		{
+			speedBar.adjustSpeed(-5);
+		}
+		else if (e.getKeyCode() == KeyEvent.VK_PERIOD)
+		{
+			speedBar.adjustSpeed(5);
 		}
 	}
 	

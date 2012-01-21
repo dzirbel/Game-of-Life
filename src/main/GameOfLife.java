@@ -28,18 +28,17 @@ public class GameOfLife
 	
 	public JFrame frame;
 	
-	private static long period = 17;		// total time for the drawing cycle in ms
+	private static long period = 20;		// total time for the drawing cycle in ms
 	private long before;
 	private long sleepTime;
 	
-	public Thread mapThread;
 	public Thread toolbarThread;
 	public Thread gridThread;
 	
 	/**
 	 * Runs the simulation by creating a GameOfLife object and calling launch() and then run().
 	 * 
-	 * @param args
+	 * @param args - the command-line arguments
 	 */
 	public static void main(String[] args)
 	{
@@ -71,8 +70,6 @@ public class GameOfLife
 		info.device.setFullScreenWindow(frame);
 		frame.createBufferStrategy(2);
 		
-		mapThread = new Thread(info.map);
-		mapThread.start();
 		toolbarThread = new Thread(info.toolbar);
 		toolbarThread.start();
 		gridThread = new Thread(info.grid);

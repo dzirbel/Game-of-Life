@@ -2,6 +2,7 @@ package main;
 
 import graphics.DisplayMonitor;
 import graphics.ImageLoader;
+import grid.Grid;
 
 import io.Listener;
 
@@ -79,11 +80,6 @@ public class Information
 	public Listener listener;
 	
 	/**
-	 * The Map object that holds all the information regarding the states of the cells.
-	 */
-	public Map map;
-	
-	/**
 	 * The current location of the pointer on the screen.
 	 */
 	public Point mouse;
@@ -126,7 +122,7 @@ public class Information
 		{
 			device.setDisplayMode(displayMode);
 		}
-		screen = new Rectangle(0, 0, displayMode.getWidth(), displayMode.getHeight());
+		screen = new Rectangle(0, 0, device.getDisplayMode().getWidth(), device.getDisplayMode().getHeight());
 		imageLoader = new ImageLoader(false);
 		imageLoader.add("images/selection.png", "selection", Transparency.TRANSLUCENT);
 		imageLoader.add("images/alive.png", "alive", Transparency.OPAQUE);
@@ -139,7 +135,6 @@ public class Information
 				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderBack").getHeight()));
 		listener = new Listener();
 		toolbar = new Toolbar(this);
-		map = new Map(400, 400, this);
 		grid = new Grid(this);
 		controlBar = new ControlBar(this);
 		generation = 0;
