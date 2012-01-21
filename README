@@ -68,7 +68,7 @@ You may be asking yourself, what exactly is the Game of Life? In the catastrophi
 If the cell is alive, it will remain alive if it has 2 or 3 neighbors.
 If the cell is dead, it will become alive if it has exactly 3 neighbors.
 
-As you will see with just a little experementation, these two simple rules can produce very complicated situations (and Turing complete, to boot!)
+As you will see with just a little experimentation, these two simple rules can produce very complicated situations (and Turing complete, to boot!)
 
 3.2 Hotkeys
 
