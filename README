@@ -21,22 +21,15 @@ Running the Game of Life is simple. Simply download the compressed zip found at 
 
 1.1 Advanced Instructions
 
-If desired, the Game of Life can be run via the command-line and will print diagnostic information in the case of a crash. Navigate to the folder containing the jar and run it with
-Java, typically as such: 'java -jar Game_of_Life.jar' [without quotes]. In addition to any exceptions thrown at runtime, warning messages will be printed if rendering takes longer
-than the expected time. Do not be surprised if a few of the messages appear. When the program is exited, a total count of the number of times that the expected render time was exceeded
-will print, along with a percentage of the total render cycles. If this number is above 50%, you may experience a slower environment.
+If desired, the Game of Life can be run via the command-line and will print diagnostic information in the case of a crash. Navigate to the folder containing the jar and run it with Java, typically as such: 'java -jar Game_of_Life.jar' [without quotes]. In addition to any exceptions thrown at runtime, warning messages will be printed if rendering takes longer than the expected time. Do not be surprised if a few of the messages appear. When the program is exited, a total count of the number of times that the expected render time was exceeded will print, along with a percentage of the total render cycles. If this number is above 50%, you may experience a slower environment.
 
 ### 2. The Grid ###
 
-The simulation takes place on "The Grid." The black rectangles constitute the playing field for the cellular automation. Alive cells are green and dead cells are black. Cells can be
-made alive or dead by left clicking and dragging. Clicking a living cell will make it dead (and all cells that are then dragged over) and clicking a dead cell will make it become alive
-(along with all other cells dragged over). The Grid is dynamically expanding, meaning that it has no boundaries, but will continue on forever. The area of the Grid viewed can be moved with the arrow keys. Additionally, the grid can be zoomed with the plus (+) or minus (-) keys. When zooming, the cell hovered over by the mouse will be retained, so that zooming
-will be centered around the mouse. When zoomed out very far, the grid lines will disappear so that the smaller sized cells can be seen.
+The simulation takes place on "The Grid." The black rectangles constitute the playing field for the cellular automation. Alive cells are green and dead cells are black. Cells can be made alive or dead by left clicking and dragging. Clicking a living cell will make it dead (and all cells that are then dragged over) and clicking a dead cell will make it become alive (along with all other cells dragged over). The Grid is dynamically expanding, meaning that it has no boundaries, but will continue on forever. The area of the Grid viewed can be moved with the arrow keys. Additionally, the grid can be zoomed with the plus (+) or minus (-) keys. When zooming, the cell hovered over by the mouse will be retained, so that zooming will be centered around the mouse. When zoomed out very far, the grid lines will disappear so that the smaller sized cells can be seen.
 
 2.1 The Shift Key
 
-Holding the shift key will change the environment in terms of movement. With the shift key held, the up and down arrow keys will zoom in and out rather than move and the left and right
-arrows will do nothing. Clicking the mouse will have no effect, but dragging will pan around the Grid. The plus (+) and minus (-) keys have no effect when the shift key is held.
+Holding the shift key will change the environment in terms of movement. With the shift key held, the up and down arrow keys will zoom in and out rather than move and the left and right arrows will do nothing. Clicking the mouse will have no effect, but dragging will pan around the Grid. The plus (+) and minus (-) keys have no effect when the shift key is held.
 
 2.2 The Control Key
 
