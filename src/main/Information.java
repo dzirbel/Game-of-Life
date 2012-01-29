@@ -35,6 +35,10 @@ public class Information
 	public ControlBar controlBar;
 	
 	/**
+	 * The Diagnostics object used to record and display all information in the program.
+	 */
+	public Diagnostics diagnostics;
+	/**
 	 * The optimal DisplayMode found using the DisplayMonitor class.
 	 */
 	public DisplayMode displayMode;
@@ -47,6 +51,10 @@ public class Information
 	 * The standard plain font.
 	 */
 	public static Font fontPlain = new Font(Font.SANS_SERIF, Font.PLAIN, 18);
+	/**
+	 * The font used for displaying technical information.
+	 */
+	public static Font fontTech = new Font(Font.MONOSPACED, Font.PLAIN, 15);
 	
 	/**
 	 * The main GameOfLife object that created this Information.
@@ -134,6 +142,7 @@ public class Information
 		imageLoader.get("folderBack").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderBack").getWidth()),
 				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderBack").getHeight()));
 		listener = new Listener();
+		diagnostics = new Diagnostics(this);
 		toolbar = new Toolbar(this);
 		grid = new Grid(this);
 		controlBar = new ControlBar(this);

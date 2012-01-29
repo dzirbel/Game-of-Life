@@ -65,7 +65,9 @@ public class Map implements Runnable
 	 */
 	public void update()
 	{
+		long before = System.nanoTime();
 		living = Simulation.simulate(getLiving());
+		info.diagnostics.recordSimulation(System.nanoTime() - before);
 		info.generation++;
 	}
 	

@@ -408,6 +408,36 @@ public class Grid implements Runnable
 	}
 	
 	/**
+	 * Returns true if and only if the left mouse button is currently held over the grid.
+	 * 
+	 * @return dragging - true if the mouse is being dragged, false otherwise
+	 */
+	public boolean isDragging()
+	{
+		return dragging;
+	}
+	
+	/**
+	 * Returns true if and only if the mouse is currently "creating" living cells.
+	 * 
+	 * @return creating - true if the mouse is currently used to create cells, false otherwise
+	 */
+	public boolean isCreating()
+	{
+		return creating;
+	}
+	
+	/**
+	 * Returns the Point at which the left mouse button was last clicked or dragged, in pixels.
+	 * 
+	 * @return lastDrag - the on-screen coordinates of the mouse's last press or drag
+	 */
+	public Point getLastDrag()
+	{
+		return lastDrag;
+	}
+	
+	/**
 	 * Converts the given value in the pixel coordinate system to the correct coordinate in the corresponding tile system.
 	 * This method simply divides the given pixel value by the zoom to find the tile value.
 	 * 
@@ -490,8 +520,10 @@ public class Grid implements Runnable
 				if (alive.get(i).x >= xLoc - 1 && alive.get(i).y >= yLoc - 1
 						&& alive.get(i).x < xLoc + toTile(info.screen.width) && alive.get(i).y < yLoc + toTile(info.screen.height))
 				{
-					g.fillRect((int)toPixel(alive.get(i).x - xLoc) + 1,
-							(int)toPixel(alive.get(i).y - yLoc) + 1, (int)zoom, (int)zoom);
+					boolean xShift = alive.get(i).x - xLoc > 0;
+					boolean yShift = alive.get(i).y - xLoc > 0;
+					g.fillRect((int)toPixel(alive.get(i).x - xLoc) + (xShift ? 1 : 0),
+							(int)toPixel(alive.get(i).y - yLoc) + (yShift ? 1 : 0), (int)zoom, (int)zoom);
 				}
 			}
 		}
@@ -502,8 +534,10 @@ public class Grid implements Runnable
 				if (alive.get(i).x >= xLoc - 1 && alive.get(i).y >= yLoc - 1
 						&& alive.get(i).x < xLoc + toTile(info.screen.width) && alive.get(i).y < yLoc + toTile(info.screen.height))
 				{
-					g.drawImage(aliveImage, (int)toPixel(alive.get(i).x - xLoc) + 1,
-							(int)toPixel(alive.get(i).y - yLoc) + 1, (int)zoom, (int)zoom, null);
+					boolean xShift = alive.get(i).x - xLoc > 0;
+					boolean yShift = alive.get(i).y - xLoc > 0;
+					g.drawImage(aliveImage, (int)toPixel(alive.get(i).x - xLoc) + (xShift ? 1 : 0),
+							(int)toPixel(alive.get(i).y - yLoc) + (yShift ? 1 : 0), (int)zoom, (int)zoom, null);
 				}
 			}
 		}

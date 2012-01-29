@@ -28,8 +28,10 @@ public class GameOfLife
 	
 	public JFrame frame;
 	
-	private static long period = 20;		// total time for the drawing cycle in ms
-	private long before;
+	public static long period = 20;			// total time for the drawing cycle in ms
+	private long drawStart;
+	private long drawEnd;
+	private long renderEnd;
 	private long sleepTime;
 	
 	public Thread toolbarThread;
@@ -84,16 +86,20 @@ public class GameOfLife
 	{
 		while (true)
 		{
-			before = System.nanoTime();
-			strategy = frame.getBufferStrategy();
+			drawStart = System.nanoTime();
+			strategy = frame.getBufferStrategy();								// begin "draw"
 			Graphics2D g = (Graphics2D)strategy.getDrawGraphics();
 			draw(g);
-			g.dispose();
-			strategy.show();
-			sleepTime = period - (System.nanoTime() - before)/1000000;
+			g.dispose();														// end "draw"
+			drawEnd = System.nanoTime();
+			
+			strategy.show();													// begin and end "render"
+			renderEnd = System.nanoTime();
+			
+			sleepTime = 1000000*period - (System.nanoTime() - drawStart);		// begin "sleep"
 			if (sleepTime <= 0)
 			{
-				System.out.println("[WARNING] Rendering took over the allotted period by " + (-sleepTime) + " ms.");
+				System.out.println("[WARNING] Rendering took over the allotted period by " + (-sleepTime/1000000) + " ms.");
 				sleepTime = 0;
 				longDrawLoops++;
 			}
@@ -101,11 +107,12 @@ public class GameOfLife
 			{
 				try
 				{
-					Thread.sleep(sleepTime);
+					Thread.sleep(sleepTime/1000000);
 				}
 				catch (InterruptedException ex) { }
-			}
+			}																	// end "sleep"
 			drawLoops++;
+			info.diagnostics.recordRenderLoop(drawEnd - drawStart, renderEnd - drawEnd, sleepTime);
 		}
 	}
 	
@@ -135,6 +142,7 @@ public class GameOfLife
 		info.toolbar.draw(g);
 		info.toolbar.selector.draw(g);
 		info.controlBar.draw(g);
+		info.diagnostics.draw(g);
 	}
 }
 

@@ -13,7 +13,8 @@ Table of Contents:
 4. Patterns
    4.1 Creating Your Own Patterns
 5. Other
-   5.1 The Next Generation
+   5.1 The Diagnostic View
+   5.2 The Next Generation
 
 ### 1. Running the Game of Life ###
 
@@ -21,7 +22,7 @@ Running the Game of Life is simple. Simply download the compressed zip found at 
 
 1.1 Advanced Instructions
 
-If desired, the Game of Life can be run via the command-line and will print diagnostic information in the case of a crash. Navigate to the folder containing the jar and run it with Java, typically as such: 'java -jar Game_of_Life.jar' [without quotes]. In addition to any exceptions thrown at runtime, warning messages will be printed if rendering takes longer than the expected time. Do not be surprised if a few of the messages appear. When the program is exited, a total count of the number of times that the expected render time was exceeded will print, along with a percentage of the total render cycles. If this number is above 50%, you may experience a slower environment.
+If desired, the Game of Life can be run via the command-line and will print diagnostic information in the case of a crash. Navigate to the folder containing the jar and run it with Java, typically as such: 'java -jar Game_of_Life.jar' [without quotes]. In addition to any exceptions thrown at runtime, warning messages will be printed if rendering takes longer than the expected time. Do not be surprised if a few of the messages appear. When the program is exited, a total count of the number of times that the expected render time was exceeded will print, along with a percentage of the total render cycles. If this number is above 50%, you may experience a slower environment. Additionally, running via command-line allows for superior heap space allocations with the -Xmx and -Xms commands.
 
 ### 2. The Grid ###
 
@@ -70,7 +71,11 @@ Sooner or later, you'll get bored with the few patterns that I put in and, lucky
 
 There a couple other things about my program you may want to know. First, the control bar in the top right allows you to minimize and close the program. The escape key will also close it.
 
-5.1 The Next Generation
+5.1 The Diagnostic View
+
+If you're interested in how well the simulation is running on your computer or have spotted a recurring bug, there is a diagnostic view that provides the user with a variety of useful information. Simply press F3 at any time to toggle this view. First, near the top-left corner of the screen is a small box labeled "General Information" that surprising enough provides general information, in this case, the location of the pointer in both pixels and tiles. Below this box is a box labeled "Grid Information". The fields inside this box show information help by the Grid: the location of the viewing area, the zoom, the current states of dragging and creating, and the location last dragged. When the simulation is run, the times that it takes to simulate a generation are plotted inside the Grid Information box. The scale on the left of the box is in milliseconds. Next, on the left of the screen is a display showing the usage of the Java heap. The maximum, current, and used heap sizes are shown along with a small bar graph. Finally, along the bottom of the screen a graph of the rendering cycle is given. Again, the vertical scale is in milliseconds. The "period" - the time that a single render cycle should take - is given as a blue line. The time that it takes to draw (create the image to be shown) is shown in red, and the time taken to render (move this image to the screen) is in yellow. The amount of time "left over" from these two processes is spent "sleeping", allowing other processes to run. The time spent sleeping in a cycle is shown in green. The total time spent in a cycle - the sum of the drawing, rendering, and sleeping times - is shown in purple. If these purple points are consistently below the period line, then the desired framerate (~50 fps) is being achieved, if not, then the program is running below the optimal framerate.
+
+5.2 The Next Generation
 
 I do have plans for the future. Right now my highest priority is to overhaul the UI and give a ton more tools that should be extremely useful but not too hard to make. I'm looking into a tabbed UI, but don't quite have the graphical design skills to pull it off, so we'll see what happens. Here's a complete list of features that I want to add, mostly sorted by precedence:
 
@@ -81,7 +86,7 @@ I do have plans for the future. Right now my highest priority is to overhaul the
 5. zombie cells (some cells are always dead or alive)
 6. save as a video (save a sequence as an animate gif or mpeg)
 7. time-traveling (move to previous generations)
-8. intense simulation (simulate a given number of generations later, and just skip to that)\
+8. intense simulation (simulate a given number of generations later, and just skip to that)
 9. basic drawing tools (rectangles, ovals, etc.)
 
 Well there you have it! If you like my work, please tell what you like and, even better don't like! My email is zirbinator@gmail.com, and I run a blog where I mostly discuss this program (at the moment, at least) at http://dominiczirbel.blogspot.com/. It's called The Hacker Imperialist. If you don't know how this file got on your computer, my guess would be that it's from my github project at https://github.com/zirbinator/Game-of-Life.
