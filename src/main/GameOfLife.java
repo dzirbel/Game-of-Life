@@ -5,6 +5,7 @@ import io.Listener;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferStrategy;
 
@@ -94,6 +95,7 @@ public class GameOfLife
 			drawEnd = System.nanoTime();
 			
 			strategy.show();													// begin and end "render"
+			Toolkit.getDefaultToolkit().sync();
 			renderEnd = System.nanoTime();
 			
 			sleepTime = 1000000*period - (System.nanoTime() - drawStart);		// begin "sleep"
