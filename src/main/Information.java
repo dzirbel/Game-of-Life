@@ -137,7 +137,6 @@ public class Information
 		imageLoader.add("images/dead.png", "dead", Transparency.OPAQUE);
 		imageLoader.add("images/folderFront.png", "folderFront", Transparency.TRANSLUCENT);
 		imageLoader.add("images/folderBack.png", "folderBack", Transparency.TRANSLUCENT);
-		imageLoader.add("images/cursor.png", "cursor", Transparency.TRANSLUCENT);
 		imageLoader.get("folderFront").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderFront").getWidth()),
 				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderFront").getHeight()));
 		imageLoader.get("folderBack").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderBack").getWidth()),
