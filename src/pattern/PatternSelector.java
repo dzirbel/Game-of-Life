@@ -375,12 +375,15 @@ public class PatternSelector implements Runnable
 		}
 		
 		arrowTooltip.draw(g);
-		for (int i = 0; i < folders.size(); i++)
+		if (visible)
 		{
-			folders.get(i).tooltip.draw(g);
-			for (int j = 0; j < folders.get(i).names.tooltips.size(); j++)
+			for (int i = 0; i < folders.size(); i++)
 			{
-				folders.get(i).names.tooltips.get(j).draw(g);
+				folders.get(i).tooltip.draw(g);
+				for (int j = 0; j < folders.get(i).names.tooltips.size(); j++)
+				{
+					folders.get(i).names.tooltips.get(j).draw(g);
+				}
 			}
 		}
 	}

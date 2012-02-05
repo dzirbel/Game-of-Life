@@ -384,11 +384,9 @@ public class Toolbar implements Runnable
 	public void draw(Graphics2D g)
 	{
 		drawToImage();
-		BufferedImage bi = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-		bi.getGraphics().drawImage(img, 0, 0, width, height, null);
 		scales[0] = scales[1] = scales[2] = scales[3] = paneAlpha;
 		rescaler = new RescaleOp(scales, offsets, null);
-		g.drawImage(bi, rescaler, x, y);
+		g.drawImage(img, rescaler, x, y);
 		
 		playTooltip.draw(g);
 		nextTooltip.draw(g);

@@ -106,6 +106,47 @@ public class ListUtils
 	}
 	
 	/**
+	 * Gets the index of the given point within the given sorted list.
+	 * If the point occurs multiple times within the list, any of the possible indexes may be returned.
+	 * To find the index of the given point, a binary search is used.
+	 * A binary search uses high and low boundaries to narrow down the space in which a value can be located within a sorted list.
+	 * At each iteration, the midpoint between the boundaries is found and compared with the point to be found.
+	 * Depending on this comparison, the boundaries are adjusted and the search is repeated.
+	 * 
+	 * @param list - the list to be searched, sorted in increasing order
+	 * @param point - the point for which to search in the list
+	 * @return index - the index of the value in the list, -1 if the value does not occur in the list
+	 */
+	public static int binaryCell(ArrayList<Cell> list, Point point)
+	{
+		int low = 0;					// the lower bound of the remaining possible space in which the value could lie
+		int high = list.size() - 1;		// the higher bound of the remaining possible space in which the value could lie
+		int mid;						// the point to be checked, the midpoint between low and high (within the bounds)
+		
+		while (true)
+		{
+			if (high < low)
+			{
+				return -1;				// the value is not within the list, return -1
+			}
+			// find the point to be checked, the midpoint between the low and high boundaries
+			mid = (low + high)/2;
+			if (isLess(list.get(mid), point))
+			{
+				low = mid + 1;			// the lower bound is too low, adjust to above the point checked
+			}
+			else if (isGreater(list.get(mid), point))
+			{
+				high = mid - 1;			// the higher bound is too high, adjust to below the point checked
+			}
+			else
+			{
+				return mid;				// the correct value is found
+			}
+		}
+	}
+	
+	/**
 	 * Finds first (lowest) index of the given value within the given sorted list.
 	 * The index representing the value one past the next lower number is returned,
 	 *  that is, the smallest index is returned among those which represent the given value.
@@ -337,6 +378,67 @@ public class ListUtils
 	 * @return index - the index at which the given Point should be added
 	 */
 	public static int getAddIndex(ArrayList<Point> list, Point point)
+	{
+		int low = 0;					// the lower bound of the remaining possible space in which the value could lie
+		int high = list.size() - 1;		// the higher bound of the remaining possible space in which the value could lie
+		int mid;						// the point to be checked, the midpoint between low and high (within the bounds)
+		
+		if (list.size() == 0)
+		{
+			return 0;
+		}
+		
+		while (true)
+		{
+			// find the point to be checked, the midpoint between the low and high boundaries
+			mid = (low + high)/2;
+			
+			if (isLess(list.get(mid), point))
+			{
+				low = mid + 1;			// the lower bound is too low, adjust to above the point checked
+				if (mid < list.size() - 1)
+				{
+					if (isGreater(list.get(mid + 1), point))
+					{
+						return mid + 1;	// mid < point, mid + 1 > point -> mid + 1 is the index at which to add
+					}
+				}
+				else
+				{
+					return mid + 1;		// mid is the last index, everything else is less -> add at last index + 1
+				}
+			}
+			else if (isGreater(list.get(mid), point))
+			{
+				high = mid;			// the higher bound is too high, adjust to below the point checked
+				if (mid > 0)
+				{
+					if (isLess(list.get(mid - 1), point))
+					{
+						return mid;		// mid > point, mid - 1 < point -> mid is the index at which to add
+					}
+				}
+				else
+				{
+					return mid;			// mid is the first index, everything else is greater -> add at first index
+				}
+			}
+			else
+			{
+				return -1;				// point is already in the list
+			}
+		}
+	}
+	
+	/**
+	 * Returns the index at which the given Point should be added to the given sorted list of Points.
+	 * A binary search is used to find the index at which the given Point fits into the sorted list.
+	 * 
+	 * @param list - the list to which the Point is to be added, sorted
+	 * @param point - the Point to add to the given list
+	 * @return index - the index at which the given Point should be added
+	 */
+	public static int getAddIndexCell(ArrayList<Cell> list, Point point)
 	{
 		int low = 0;					// the lower bound of the remaining possible space in which the value could lie
 		int high = list.size() - 1;		// the higher bound of the remaining possible space in which the value could lie
