@@ -102,12 +102,12 @@ public class Toolbar implements Runnable
 		info.listener.requestNotification(this, "mouseReleased", Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseDragged", Listener.TYPE_MOUSE_DRAGGED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
-		toolbarImageIndex = info.imageLoader.add("images/toolbar.png", "pane", Transparency.TRANSLUCENT);
-		dotsImageIndex = info.imageLoader.add("images/dots.png", "dots", Transparency.TRANSLUCENT);
-		nextImageIndex = info.imageLoader.add("images/next.png", "next", Transparency.TRANSLUCENT);
-		broomImageIndex = info.imageLoader.add("images/broom.png", "broom", Transparency.TRANSLUCENT);
-		playImageIndex = info.imageLoader.add("images/play.png", "play", Transparency.TRANSLUCENT);
-		pauseImageIndex = info.imageLoader.add("images/pause.png", "pause", Transparency.TRANSLUCENT);
+		toolbarImageIndex = info.load("toolbar.png", "pane", Transparency.TRANSLUCENT);
+		dotsImageIndex = info.load("dots.png", "dots", Transparency.TRANSLUCENT);
+		nextImageIndex = info.load("next.png", "next", Transparency.TRANSLUCENT);
+		broomImageIndex = info.load("broom.png", "broom", Transparency.TRANSLUCENT);
+		playImageIndex = info.load("play.png", "play", Transparency.TRANSLUCENT);
+		pauseImageIndex = info.load("pause.png", "pause", Transparency.TRANSLUCENT);
 		
 		width = info.imageLoader.get(toolbarImageIndex).getWidth();
 		height = info.imageLoader.get(toolbarImageIndex).getHeight();

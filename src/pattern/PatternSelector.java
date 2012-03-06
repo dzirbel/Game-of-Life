@@ -69,7 +69,7 @@ public class PatternSelector implements Runnable
 	{
 		this.info = info;
 		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON_ALL);
-		arrowIndex = info.imageLoader.add("images/arrow.png", "arrow", Transparency.TRANSLUCENT);
+		arrowIndex = info.load("arrow.png", "arrow", Transparency.TRANSLUCENT);
 		folders = new ArrayList<PatternFolder>();
 		selected = null;
 		bounds = new Rectangle();

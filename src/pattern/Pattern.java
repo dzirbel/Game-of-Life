@@ -347,7 +347,6 @@ public class Pattern
 				{
 					lines.add(line);
 				}
-
 			}
 			int height = lines.size();
 			int width = 0;

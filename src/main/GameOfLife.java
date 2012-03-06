@@ -63,7 +63,7 @@ public class GameOfLife
 		frame = new JFrame("Game of Life");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setIconImage(icon);
-		frame.setContentPane(new Panel(info));
+		frame.setContentPane(new Panel());
 		frame.setUndecorated(true);
 		frame.setResizable(false);
 		frame.addKeyListener(info.listener);
@@ -144,43 +144,32 @@ public class GameOfLife
 		info.toolbar.draw(g);
 		info.toolbar.selector.draw(g);
 		info.controlBar.draw(g);
+		info.gui.draw(g);
 		info.diagnostics.draw(g);
 	}
-}
-
-/**
- * Allows for screenshots and screen recording to capture the screen by providing a more typical context in which to draw.
- * 
- * @author Dominic
- */
-class Panel extends JPanel
-{
-	Information info;
-	
-	private static final long serialVersionUID = 1L;
 	
 	/**
-	 * Creates a new Panel with the given Information.
+	 * Allows for screenshots and screen recording to capture the screen by providing a more typical context in which to draw.
 	 * 
-	 * @param info - the current Information
+	 * @author Dominic
 	 */
-	public Panel(Information info)
-	{
-		this.info = info;
-	}
-	
-	/**
-	 * Called during a typical drawing method, simply calls the Game of Life's draw method.
-	 * This allows for screenshots to be made with a conventional method.
-	 * At the beginning of the execution, a null reference is often made because this method is called before initialization is complete.
-	 * Thus, any NullPointerExceptions thrown (either because info or gameOfLife is null) are completely ignored.
-	 */
-	public void paintComponent(Graphics g)
-	{
-		try
+	private class Panel extends JPanel
+	{		
+		private static final long serialVersionUID = 1L;
+		
+		/**
+		 * Called during a typical drawing method, simply calls the Game of Life's draw method.
+		 * This allows for screenshots to be made with a conventional method.
+		 * At the beginning of the execution, a null reference is often made because this method is called before initialization is complete.
+		 * Thus, any NullPointerExceptions thrown (either because info or gameOfLife is null) are completely ignored.
+		 */
+		public void paintComponent(Graphics g)
 		{
-			info.gameOfLife.draw((Graphics2D)g);
+			try
+			{
+				draw((Graphics2D)g);
+			}
+			catch (NullPointerException ex) { }
 		}
-		catch (NullPointerException ex) { }
 	}
 }

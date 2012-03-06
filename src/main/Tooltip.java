@@ -98,7 +98,7 @@ public class Tooltip implements Runnable
 	{
 		try
 		{
-			Graphics g = info.gameOfLife.frame.getBufferStrategy().getDrawGraphics();
+			Graphics g = info.getGraphics();
 			metrics = new Metrics(Information.fontPlain);
 			size = metrics.getStringBounds(message, g);
 			

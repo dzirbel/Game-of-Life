@@ -3,12 +3,15 @@ package main;
 import graphics.DisplayMonitor;
 import graphics.ImageLoader;
 import grid.Grid;
+import gui.GUI;
 
 import io.Listener;
 
 import java.awt.Color;
 import java.awt.DisplayMode;
 import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Point;
@@ -25,6 +28,8 @@ import pattern.PatternFolder;
  */
 public class Information
 {
+	private AppletOfLife appletOfLife;
+	
 	/**
 	 * The standard light blue color to be used for text and other features.
 	 */
@@ -59,7 +64,7 @@ public class Information
 	/**
 	 * The main GameOfLife object that created this Information.
 	 */
-	public GameOfLife gameOfLife;
+	private GameOfLife gameOfLife;
 	/**
 	 * The GraphicsDevice used to select the best DisplayMode and enter full-screen exclusive mode.
 	 */
@@ -72,6 +77,10 @@ public class Information
 	 * The Grid object.
 	 */
 	public Grid grid;
+	/**
+	 * The GUI container that holds all the Views.
+	 */
+	public GUI gui;
 	
 	/**
 	 * The ImageLoader that handles all image loading and referencing.
@@ -81,6 +90,18 @@ public class Information
 	 * The current generation of the simulation.
 	 */
 	public int generation;
+	/**
+	 * Represents milli-units.
+	 */
+	public static int MILLI = 1;
+	/**
+	 * Represents micro-units.
+	 */
+	public static int MICRO = 2;
+	/**
+	 * Represents nano-units.
+	 */
+	public static int NANO = 3;
 	
 	/**
 	 * The Listener that receives all key and mouse input events.
@@ -122,6 +143,7 @@ public class Information
 	public void init(GameOfLife gameOfLife)
 	{
 		this.gameOfLife = gameOfLife;
+		appletOfLife = null;
 		mouse = new Point(0, 0);
 		environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		device = environment.getDefaultScreenDevice();
@@ -137,6 +159,7 @@ public class Information
 		imageLoader.add("images/dead.png", "dead", Transparency.OPAQUE);
 		imageLoader.add("images/folderFront.png", "folderFront", Transparency.TRANSLUCENT);
 		imageLoader.add("images/folderBack.png", "folderBack", Transparency.TRANSLUCENT);
+		imageLoader.add("images/tab.png", "tab", Transparency.TRANSLUCENT);
 		imageLoader.get("folderFront").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderFront").getWidth()),
 				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderFront").getHeight()));
 		imageLoader.get("folderBack").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderBack").getWidth()),
@@ -147,8 +170,50 @@ public class Information
 		grid = new Grid(this);
 		controlBar = new ControlBar(this);
 		generation = 0;
+		gui = new GUI(this);
 		listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_MOVED, 0);
 		listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_DRAGGED, 0);
+	}
+	
+	public void init(AppletOfLife appletOfLife)
+	{
+		this.appletOfLife = appletOfLife;
+		gameOfLife = null;
+		mouse = new Point(0, 0);
+		imageLoader = new ImageLoader(false);
+		imageLoader.add("selection.png", "selection", Transparency.TRANSLUCENT);
+		imageLoader.add("alive.png", "alive", Transparency.OPAQUE);
+		imageLoader.add("dead.png", "dead", Transparency.OPAQUE);
+		imageLoader.add("folderFront.png", "folderFront", Transparency.TRANSLUCENT);
+		imageLoader.add("folderBack.png", "folderBack", Transparency.TRANSLUCENT);
+		imageLoader.add("tab.png", "tab", Transparency.TRANSLUCENT);
+		imageLoader.get("folderFront").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderFront").getWidth()),
+				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderFront").getHeight()));
+		imageLoader.get("folderBack").setScale(((double)PatternFolder.FOLDER_WIDTH)/((double)imageLoader.get("folderBack").getWidth()),
+				((double)PatternFolder.FOLDER_HEIGHT)/((double)imageLoader.get("folderBack").getHeight()));
+		screen = new Rectangle(0, 0, appletOfLife.getWidth(), appletOfLife.getHeight());
+		listener = new Listener();
+		diagnostics = new Diagnostics(this);
+		toolbar = new Toolbar(this);
+		grid = new Grid(this);
+		controlBar = new ControlBar(this);
+		generation = 0;
+		gui = new GUI(this);
+		listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_MOVED, 0);
+		listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_DRAGGED, 0);
+	}
+	
+	public int load(String imageName, String referenceName, int transparency)
+	{
+		if (gameOfLife != null)
+		{
+			return imageLoader.add("images/" + imageName, referenceName, transparency);
+		}
+		else if (appletOfLife != null)
+		{
+			return imageLoader.add(imageName, referenceName, transparency);
+		}
+		return -1;
 	}
 	
 	/**
@@ -160,5 +225,94 @@ public class Information
 	public void mouseMoved(MouseEvent event)
 	{
 		mouse = event.getLocationOnScreen();
+	}
+	
+	/**
+	 * Converts the given value with units firstUnit to units secondUnit.
+	 * This method only supports conversions between milli-, micro-, and nano-seconds.
+	 * 
+	 * @param firstUnit - the unit of the given value
+	 * @param secondUnit - the unit which the returned value has
+	 * @param value - the value to be converted
+	 * @return conversion - the given value in the given destination units
+	 */
+	public static long time(int firstUnit, int secondUnit, long value)
+	{
+		if (firstUnit == MILLI)
+		{
+			if (firstUnit == MILLI)
+			{
+				return value;
+			}
+			else if (firstUnit == MICRO)
+			{
+				return value*1000;
+			}
+			else if (firstUnit == NANO)
+			{
+				return value*1000000;
+			}
+		}
+		else if (firstUnit == MICRO)
+		{
+			if (firstUnit == MILLI)
+			{
+				return value/1000;
+			}
+			else if (firstUnit == MICRO)
+			{
+				return value;
+			}
+			else if (firstUnit == NANO)
+			{
+				return value*1000;
+			}
+		}
+		else if (firstUnit == NANO)
+		{
+			if (firstUnit == MILLI)
+			{
+				return value/1000000;
+			}
+			else if (firstUnit == MICRO)
+			{
+				return value/1000;
+			}
+			else if (firstUnit == NANO)
+			{
+				return value;
+			}
+		}
+		return -1;
+	}
+	
+	public Graphics getGraphics()
+	{
+		if (gameOfLife != null)
+		{
+			return gameOfLife.frame.getBufferStrategy().getDrawGraphics();
+		}
+		else if (appletOfLife != null)
+		{
+			
+		}
+		return null;
+	}
+	
+	public void minimize()
+	{
+		if (gameOfLife != null)
+		{
+			gameOfLife.frame.setState(Frame.ICONIFIED);
+		}
+	}
+	
+	public boolean isApplet()
+	{
+		if (appletOfLife != null)
+		{
+			return true;
+		}
+		return false;
 	}
 }

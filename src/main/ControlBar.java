@@ -2,7 +2,6 @@ package main;
 
 import io.Listener;
 
-import java.awt.Frame;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -26,8 +25,6 @@ public class ControlBar
 	private Rectangle minimizeBounds;
 	private Rectangle closeBounds;
 	
-	private static String controlBarFile = "images/controlBar.png";
-	
 	/**
 	 * Creates a new OperationBar with the given Information.
 	 * The operation bar image is added to the ImageLoader used by the Information and then bounding Rectangles are initialized.
@@ -38,7 +35,7 @@ public class ControlBar
 	public ControlBar(Information info)
 	{
 		this.info = info;
-		controlBarIndex = info.imageLoader.add(controlBarFile, "controlBar", Transparency.TRANSLUCENT);
+		controlBarIndex = info.load("controlBar.png", "controlBar", Transparency.TRANSLUCENT);
 		bounds = new Rectangle(info.screen.width - info.imageLoader.get(controlBarIndex).getWidth(), 0,
 				info.imageLoader.get(controlBarIndex).getWidth(), info.imageLoader.get(controlBarIndex).getHeight());
 		minimizeBounds = new Rectangle(bounds.x + minimizeShift.x, bounds.y + minimizeShift.y, 40, 40);
@@ -56,7 +53,7 @@ public class ControlBar
 	{
 		if (minimizeBounds.contains(e.getX(), e.getY()))
 		{
-			info.gameOfLife.frame.setState(Frame.ICONIFIED);
+			info.minimize();
 		}
 		else if (closeBounds.contains(e.getX(), e.getY()))
 		{

@@ -218,7 +218,7 @@ public class Grid implements Runnable
 	 */
 	public void mousePressed(MouseEvent e)
 	{
-		if (!info.controlBar.consumed(e) && !info.toolbar.consumed(e) && !info.toolbar.selector.consumed(e))
+		if (!info.controlBar.consumed(e) && !info.toolbar.consumed(e) && !info.toolbar.selector.consumed(e) && !info.gui.consumed(e))
 		{
 			if (!shift)
 			{
@@ -258,7 +258,7 @@ public class Grid implements Runnable
 	 */
 	public void mouseDragged(MouseEvent e)
 	{
-		if (!info.controlBar.consumed(e) && !info.toolbar.consumed(e) && !info.toolbar.selector.consumed(e))
+		if (!info.controlBar.consumed(e) && !info.toolbar.consumed(e) && !info.toolbar.selector.consumed(e) && !info.gui.consumed(e))
 		{
 			if (dragging)
 			{

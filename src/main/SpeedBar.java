@@ -41,8 +41,8 @@ public class SpeedBar
 	public SpeedBar(Information info)
 	{
 		this.info = info;
-		sliderIndex = info.imageLoader.add("images/slider.png", "slider", Transparency.TRANSLUCENT);
-		sliderBarIndex = info.imageLoader.add("images/sliderBar.png", "sliderBar", Transparency.TRANSLUCENT);
+		sliderIndex = info.load("slider.png", "slider", Transparency.TRANSLUCENT);
+		sliderBarIndex = info.load("sliderBar.png", "sliderBar", Transparency.TRANSLUCENT);
 		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseReleased", Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
 		info.listener.requestNotification(this, "mouseDragged", Listener.TYPE_MOUSE_DRAGGED, 0);
