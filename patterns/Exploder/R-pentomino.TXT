@@ -1,5 +1,0 @@
-ftt
-ttf
-ftf
-###
-R-pentomino

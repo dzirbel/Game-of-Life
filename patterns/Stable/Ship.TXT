@@ -1,5 +1,0 @@
-ttf
-tft
-ftt
-###
-Ship

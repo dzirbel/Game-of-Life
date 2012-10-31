@@ -1,5 +1,0 @@
-fft
-tft
-ftt
-###
-Glider

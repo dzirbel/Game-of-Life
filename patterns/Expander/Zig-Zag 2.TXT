@@ -1,7 +1,0 @@
-tttft
-tffff
-ffftt
-fttft
-tftft
-###
-Zig-Zag 2
