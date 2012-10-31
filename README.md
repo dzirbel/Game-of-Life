@@ -3,19 +3,20 @@
 **The Game of Life** is a simulation of John Conway's Game of Life written in Java created by zirbinator [Dominic Zirbel, zirbinator@gmail.com]. This software is open-source and free to use under the GNU General Public License, Version 3 (http://www.gnu.org/licenses/gpl.html).
 
 **Table of Contents**
+
 1. **News**: updates and thoughts from zirbinator
 2. **Background**: information on the Game of Life in general
    2-1. **Rules**: the rules of the simulation
 3. **Installation**: how install and run the Game of Life
-   3-1: **Advanced Instructions**: options to increase performance or troubleshoot issues
+   3-1. **Advanced Instructions**: options to increase performance or troubleshoot issues
 4. **Basics**: basic information
 5. **The Grid**: how to manipulate the simulation itself
-   5-1: **The Shift Key**
-   5-2: **The Control Key**
+   5-1. **The Shift Key**
+   5-2. **The Control Key**
 6. **The Toolbar**: how to use the user interface
-   6-1: **Hotkeys**
+   6-1. **Hotkeys**
 7. **Patterns**: how to place pre-defined configurations
-   7-1: **Custom Patterns**: creating user-defined patterns
+   7-1. **Custom Patterns**: creating user-defined patterns
 8. **The Diagnostic View**: diagnostic information
 9. **The Next Generation**: upcoming features
 
