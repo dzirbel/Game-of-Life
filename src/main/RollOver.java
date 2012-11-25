@@ -1,144 +1,184 @@
 package main;
 
-import java.awt.Graphics;
+import graphics.AcceleratedImage;
+import image.ImageLoader;
+import io.Listener;
+
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.geom.AffineTransform;
-import java.awt.image.BufferedImage;
-import java.awt.image.RescaleOp;
 
 /**
- * Represents the highlight that can be placed behind buttons and other objects on the screen.
- * A RollOver fades in as the mouse is moved over the object and then fades out after the mouse leaves.
- * A RollOver also has the ability to "splash" - fade fully in and then fully out once.
+ * Represents a highlight drawn behind an icon when the user hovers over it with the mouse.
+ * A RollOver automatically fades in when the user moves the cursor over the icon and fades out
+ *  when the user moves the cursor off of the icon.
+ * Additionally, it can be "splashed" - faded in and out quickly, as when the icon is activated
+ *  without the user of the mouse (for example, if a key is pressed that does the same action as
+ *  clicking the icon).
  * 
- * @author Dominic
+ * @author zirbinator
  */
 public class RollOver implements Runnable
 {
-	private boolean splashing = false;
-	private boolean splashingUp = false;
-	
-	private float[] scales = {1f, 1f, 1f, 1f};
-	private float[] offsets = new float[4];
-	private float alpha = 0f;
-	public static float alphaSpeed = 0.05f;
-	
-	private Information info;
-	private int selectionIndex;
-	
-	private static long period = 20;
-	
-	public Rectangle bounds;
-	private RescaleOp rescaler;
-	
-	/**
-	 * Creates a new RollOver with the given bounds and Information.
-	 * 
-	 * @param bounds - the bounding rectangle for this RollOver
-	 * @param info - the current Information
-	 */
-	public RollOver(Rectangle bounds, Information info)
-	{
-		this.info = info;
-		this.bounds = bounds;
-		selectionIndex = info.imageLoader.getIndex("selection");
-	}
-	
-	/**
-	 * Runs the RollOver by continually updating and sleeping.
-	 */
-	public void run() 
-	{
-		while (true)
-		{
-			update();
-			try
-			{
-				Thread.sleep(period);
-			}
-			catch (InterruptedException e) { }
-		}
-	}
-	
-	/**
-	 * Updates the RollOver by checking if the mouse is currently within the boundary of the RollOver and increasing the alpha value if so.
-	 * If the mouse is not, the alpha value is decreased.
-	 * In either case, the alpha value is kept between 0 and 1.
-	 */
-	public void update()
-	{
-		if (splashing)
-		{
-			if (splashingUp)
-			{
-				alpha += alphaSpeed;
-				if (alpha > 1)
-				{
-					alpha = 1;
-					splashingUp = false;
-				}
-			}
-			else
-			{
-				alpha -= alphaSpeed;
-				if (alpha < 0)
-				{
-					alpha = 0;
-					splashing = false;
-				}
-			}
-		}
-		else
-		{
-			if (bounds.contains(info.mouse))
-			{
-				alpha = Math.min(alpha + alphaSpeed, 1f);
-			}
-			else
-			{
-				alpha = Math.max(alpha - alphaSpeed, 0f);
-			}
-		}
-	}
-	
-	public void splash()
-	{
-		splashing = true;
-		splashingUp = true;
-	}
-	
-	/**
-	 * Draws the RollOver with the current alpha value at the location specified by the bounding box.
-	 * 
-	 * @param g - the current Graphics context
-	 */
-	public void draw(Graphics2D g)
-	{
-		draw(0, 0, g);
-	}
-	
-	/**
-	 * Draws the RollOver with the current alpha value at the location specified by the bounding box, shifted by the given amounts.
-	 * 
-	 * @param shiftX - the amount to shift the x-coordinate of the RollOver, in pixels
-	 * @param shiftY - the amount to shift the y-coordinate of the RollOver, in pixels
-	 * @param g - the current Graphics context
-	 */
-	public void draw(int shiftX, int shiftY, Graphics2D g)
-	{
-		if (alpha > 0.001f)
-		{
-			BufferedImage bi = new BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_ARGB);
-			Graphics biG = bi.getGraphics();
-			info.imageLoader.get(selectionIndex).setScale((double)((double)bounds.width)/((double)info.imageLoader.get(selectionIndex).getWidth()),
-					(double)((double)bounds.height)/((double)info.imageLoader.get(selectionIndex).getHeight()));
-			info.imageLoader.get(selectionIndex).draw(0, 0, (Graphics2D)biG);
-			info.imageLoader.get(selectionIndex).setTransform(new AffineTransform());
-			
-			scales[3] = alpha;
-			rescaler = new RescaleOp(scales, offsets, null);
-			g.drawImage(bi, rescaler, bounds.x + shiftX, bounds.y + shiftY);
-		}
-	}
+    private AcceleratedImage selection;
+    
+    private float alpha;
+    
+    private int buffer;
+    
+    private static final long period = 25;
+    /**
+     * The time to completely fade in or out (i.e. from alpha of 0 to 1) in milliseconds.
+     */
+    private static final long fadeTime = 350;
+    
+    private Rectangle bounds;
+    
+    private SplashState splashing;
+    
+    /**
+     * Creates a new RollOver with the given boundaries.
+     * 
+     * @param bounds - the area of the screen which activates the RollOver when it is hovered over
+     *  by the cursor
+     */
+    public RollOver(Rectangle bounds, int buffer)
+    {
+        this.buffer = buffer;
+        selection = ImageLoader.load("rollover");
+        alpha = 0;
+        splashing = SplashState.NO_SPLASH;
+        
+        setBounds(bounds);
+        
+        new Thread(this).start();
+    }
+    
+    /**
+     * Gets the boundaries of this RollOver: the area of the screen which activates the RollOver
+     *  when it is hovered over by the cursor.
+     * 
+     * @return a cloned version of the boundaries of this RollOver
+     */
+    public Rectangle getBounds()
+    {
+        return (Rectangle) bounds.clone();
+    }
+    
+    /**
+     * Sets the boundaries of this RollOver: the area of the screen which activates the RollOver
+     *  when it is hovered over by the cursor.
+     * 
+     * @param bounds - the new boundaries for this RollOver
+     */
+    public void setBounds(Rectangle bounds)
+    {
+        this.bounds = new Rectangle(bounds.x - buffer, bounds.y - buffer,
+                bounds.width + 2*buffer, bounds.height + 2*buffer);
+        if (bounds != null)
+        {
+            selection.setScale((double)this.bounds.width/selection.getWidth(),
+                    (double)this.bounds.height/selection.getHeight());
+        }
+    }
+    
+    /**
+     * Runs this RollOver in its own Thread.
+     * The RollOver continually updates its transparency based on the splashing state and mouse
+     *  position.
+     * 
+     * @see Runnable#run()
+     */
+    public void run()
+    {
+        long lastUpdate = System.nanoTime();
+        float elapsed;
+        while (true)
+        {
+            elapsed = (System.nanoTime() - lastUpdate) / 1000000;
+            if (splashing == SplashState.NO_SPLASH)
+            {
+                if (bounds.contains(Listener.getMouse()))
+                {
+                    alpha = Math.min(alpha + elapsed / fadeTime, 1f);
+                }
+                else
+                {
+                    alpha = Math.max(alpha - elapsed / fadeTime, 0f);
+                }
+            }
+            else if (splashing == SplashState.SPLASH_IN)
+            {
+                alpha += elapsed / fadeTime;
+                if (alpha >= 1)
+                {
+                    alpha = 1;
+                    splashing = SplashState.SPLASH_OUT;
+                }
+            }
+            else if (splashing == SplashState.SPLASH_OUT)
+            {
+                alpha -= elapsed / fadeTime;
+                if (alpha <= 0)
+                {
+                    alpha = 0;
+                    splashing = SplashState.NO_SPLASH;
+                }
+            }
+            
+            lastUpdate = System.nanoTime();
+            try
+            {
+                Thread.sleep(period);
+            }
+            catch (InterruptedException e)
+            {
+            }
+        }
+    }
+    
+    /**
+     * Splashes this RollOver, causing it to fade entirely in and then entirely out, ignoring the
+     *  cursor.
+     */
+    public void splash()
+    {
+        splashing = SplashState.SPLASH_IN;
+    }
+    
+    /**
+     * Draws this RollOver onto the given graphics context at the position of its boundaries.
+     * 
+     * @param g - the graphics context
+     */
+    public void draw(Graphics2D g)
+    {
+        if (alpha > 0)
+        {
+            selection.setTransparency(alpha);
+            selection.draw(bounds.x, bounds.y, g);
+        }
+    }
+    
+    /**
+     * Defines the splashing state of a RollOver.
+     * 
+     * @author zirbinator
+     */
+    private enum SplashState
+    {
+        /**
+         * This RollOver is not currently splashing: it should respond to the cursor's position.
+         */
+        NO_SPLASH,
+        /**
+         * This RollOver is currently splashing in: it should increase its transparency to 1 (fade
+         *  in) without regarding the position of the cursor.
+         */
+        SPLASH_IN,
+        /**
+         * This RollOver is currently splashing out: it should decrease its transparency to 0 (fade
+         *  out) without regarding the position of the cursor.
+         */
+        SPLASH_OUT;
+    }
 }

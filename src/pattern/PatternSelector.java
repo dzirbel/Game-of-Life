@@ -1,426 +1,426 @@
 package pattern;
 
-import io.Listener;
+import graphics.AcceleratedImage;
+import graphics.ButtonListener;
 
+import image.ImageLoader;
+
+import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.LinearGradientPaint;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.Transparency;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.awt.image.RescaleOp;
-import java.io.File;
+import java.awt.geom.Point2D;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 
-import main.Information;
-import main.RollOver;
-import main.Tooltip;
+import main.Toolbar;
 
 /**
- * Represents the menu allowing the user to select a pattern found within the pattern data files.
- * The patterns are organized into folders, represented by PatternFolders, which categorize them into types.
- * The menu loads the patterns into folders and then draws the folders to the screen.
+ * Represents an "extension" to an enclosing {@link Toolbar} that displays patterns and allows the
+ *  user to pick them and place them on the grid.
+ * A PatternSelector accomplishes this by holding and managing a list of {@link PatternSelector}s.
  * 
- * @author Dominic
+ * @author zirbinator
  */
 public class PatternSelector implements Runnable
 {
-	public ArrayList<PatternFolder> folders;
-	
-	public boolean visible = false;
-	
-	private float[] scales = {1f, 1f, 1f, 1f};
-	private float[] offsets = new float[4];
-	private float alpha = 0f;
-	private static float alphaSpeed = 0.05f;
-	
-	private Information info;
-	private static int TOP_BUFFER = 30;					// distance from the top of the bounding box to the top of the folders
-	private static int BOTTOM_BUFFER = 20;				// distance from the bottom of the bounding box to the bottom of the folders
-	private static int SIDE_BUFFER = 25;				// distance between folders and other folders as well as the sides of the bounding box
-	private int arrowIndex;
-	public static final int TOOLBAR_MOVE = 1;
-	public static final int FOLDER_EXPAND = 2;
-	public static final int INIT = 3;
-	
-	private long period = 10;						// time between updates in ms
-
-	public Pattern selected;
-	
-	public Rectangle bounds;
-	private RescaleOp rescaler;
-	public RollOver arrowRO;
-	
-	private String patternFolder = "patterns/";		// location of patterns
-	
-	public Thread arrowROThread;
-	public Thread arrowTooltipThread;
-	public Tooltip arrowTooltip;
-	
-	/**
-	 * Creates a new PatternSelector with the given Information.
-	 * Various fields are initialized, requests are made to the listener, and patterns are loaded from file.
-	 * 
-	 * @param info - the current Information
-	 */
-	public PatternSelector(Information info)
-	{
-		this.info = info;
-		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON_ALL);
-		arrowIndex = info.load("arrow.png", "arrow", Transparency.TRANSLUCENT);
-		folders = new ArrayList<PatternFolder>();
-		selected = null;
-		bounds = new Rectangle();
-		
-		File folder = new File(patternFolder);
-		File[] files = folder.listFiles();
-		for (int i = 0; i < files.length; i++)
-		{
-			PatternFolder patternFolder = new PatternFolder(files[i].getPath(), 0, 0, info);
-			folders.add(patternFolder);
-		}
-		
-		arrowRO = new RollOver(new Rectangle(), info);
-		arrowROThread = new Thread(arrowRO);
-		arrowROThread.start();
-		
-		arrowTooltip = new Tooltip(new Rectangle(), "Open the Pattern Selector", info);
-		arrowTooltipThread = new Thread(arrowTooltip);
-		arrowTooltipThread.start();
-		
-		setBounds(INIT);
-		
-		for (int i = 0; i < folders.size(); i++)
-		{
-			folders.get(i).names.setLocation(folders.get(i).names.bounds.x, folders.get(i).names.bounds.y);		// fully initialize the tooltips
-		}
-	}
-	
-	/**
-	 * Sets the bounding box, the location of the arrow in the toolbar, and the locations of the folders.
-	 * Different actions will be taken depending on the reason for the boundary adjustment so that the necessary components are moved but no more.
-	 * 
-	 * @param reason - the reason for this boundary adjustment
-	 */
-	public void setBounds(int reason)
-	{
-		if (reason == TOOLBAR_MOVE)
-		{
-			arrowRO.bounds = new Rectangle(info.toolbar.x + 25, info.toolbar.y + info.toolbar.bounds.height/2 - info.imageLoader.get(arrowIndex).getHeight()/2,
-					info.imageLoader.get(arrowIndex).getWidth(), info.imageLoader.get(arrowIndex).getHeight());
-			arrowTooltip.bounds = arrowRO.bounds;
-			
-			if (arrowRO.bounds.x >= info.screen.getWidth()/2 && arrowRO.bounds.y >= info.screen.getHeight()/2)
-			{
-				// bottom-right corner of the screen
-				bounds.x = info.toolbar.x - bounds.width;
-				bounds.y = info.toolbar.y + info.toolbar.height - bounds.height;
-			}
-			else if (arrowRO.bounds.x < info.screen.getWidth()/2 && arrowRO.bounds.y >= info.screen.getHeight()/2)
-			{
-				// bottom-left corner of the screen
-				bounds.x = info.toolbar.x;
-				bounds.y = info.toolbar.y - bounds.height;
-			}
-			else if (arrowRO.bounds.x >= info.screen.getWidth()/2 && arrowRO.bounds.y < info.screen.getHeight()/2)
-			{
-				// top-right corner of the screen
-				bounds.x = info.toolbar.x - bounds.width;
-				bounds.y = info.toolbar.y;
-			}
-			else if (arrowRO.bounds.x < info.screen.getWidth()/2 && arrowRO.bounds.y < info.screen.getHeight()/2)
-			{
-				// top-left corner of the screen
-				bounds.x = info.toolbar.x;
-				bounds.y = info.toolbar.y + info.toolbar.height;
-			}
-			for (int i = 0; i < folders.size(); i++)
-			{
-				folders.get(i).names.setLocation(folders.get(i).names.bounds.x, folders.get(i).names.bounds.y);		// fully initialize the tooltips
-			}
-		}
-		else if (reason == FOLDER_EXPAND || reason == INIT)
-		{
-			int xLoc = 0;
-			for (int i = folders.size() - 1; i >= 0; i--)
-			{
-				xLoc += SIDE_BUFFER + folders.get(i).width;
-				folders.get(i).setLocation(xLoc, BOTTOM_BUFFER + (int)folders.get(i).height);
-			}
-			
-			int height = PatternFolder.FOLDER_HEIGHT;
-			for (int i = 0; i < folders.size(); i++)
-			{
-				height = (int)Math.max(height, folders.get(i).height);
-			}
-			height += TOP_BUFFER + BOTTOM_BUFFER;
-			bounds.height = height;
-			
-			int width = (folders.size() + 1)*SIDE_BUFFER;
-			for (int i = 0; i < folders.size(); i++)
-			{
-				width += folders.get(i).width;
-			}
-			bounds.width = width;
-			
-			if (arrowRO.bounds.x >= info.screen.getWidth()/2 && arrowRO.bounds.y >= info.screen.getHeight()/2)
-			{
-				// bottom-right corner of the screen
-				bounds.x = info.toolbar.x - bounds.width;
-				bounds.y = info.toolbar.y + info.toolbar.height - bounds.height;
-			}
-			else if (arrowRO.bounds.x < info.screen.getWidth()/2 && arrowRO.bounds.y >= info.screen.getHeight()/2)
-			{
-				// bottom-left corner of the screen
-				bounds.x = info.toolbar.x;
-				bounds.y = info.toolbar.y - bounds.height;
-			}
-			else if (arrowRO.bounds.x >= info.screen.getWidth()/2 && arrowRO.bounds.y < info.screen.getHeight()/2)
-			{
-				// top-right corner of the screen
-				bounds.x = info.toolbar.x - bounds.width;
-				bounds.y = info.toolbar.y;
-			}
-			else if (arrowRO.bounds.x < info.screen.getWidth()/2 && arrowRO.bounds.y < info.screen.getHeight()/2)
-			{
-				// top-left corner of the screen
-				bounds.x = info.toolbar.x;
-				bounds.y = info.toolbar.y + info.toolbar.height;
-			}
-			for (int i = 0; i < folders.size(); i++)
-			{
-				folders.get(i).names.setLocation(folders.get(i).names.bounds.x, folders.get(i).names.bounds.y);		// fully initialize the tooltips
-			}
-		}
-	}
-	
-	/**
-	 * Runs the PatternSelection within its own Thread by continually updating and sleeping.
-	 */
-	public void run()
-	{
-		while (true)
-		{
-			update();
-			try
-			{
-				Thread.sleep(period);
-			}
-			catch (InterruptedException e) { }
-		}
-	}
-	
-	/**
-	 * Updates the PatternSelection by adjusting the alpha value based on whether or not the PatternSelection is currently visible.
-	 * Also updates the folders held by the selector.
-	 */
-	public void update()
-	{
-		if (visible)
-		{
-			alpha = Math.min(alpha + alphaSpeed, 1f);
-		}
-		else
-		{
-			alpha = Math.max(alpha - alphaSpeed, 0f);
-		}
-		for (int i = 0; i < folders.size(); i++)
-		{
-			folders.get(i).update();
-		}
-	}
-	
-	/**
-	 * Called when the mouse is pressed, this method takes an appropriate action if required.
-	 * First, if either the toolbar or the control bar consume the event, the selected pattern is set to null
-	 *  and the arrow is checked and, if it was clicked, the selector is switched between visibility.
-	 * Otherwise, if the event did not originate from the left mouse button (BUTTON1),
-	 *  it is checked to see whether it came from the right mouse button (BUTTON3) and, if so, the selected pattern is set to null.
-	 * Otherwise, if the bounds do not contain the event or the selector is invisible, the selected pattern is placed into the grid.
-	 * Otherwise, the folders are checked and expanded properly, and if a pattern was selected it is set cloned to the selected pattern. 
-	 * 
-	 * @param e - the event causing this method invocation.
-	 */
-	public void mousePressed(MouseEvent e)
-	{
-		if (!info.toolbar.consumed(e) && !info.controlBar.consumed(e))
-		{
-			if (e.getButton() == MouseEvent.BUTTON1)
-			{
-				if (bounds.contains(e.getPoint()) && visible)
-				{
-					// within the bounds, visible, left mouse button = folders
-					boolean inFolder = false;
-					for (int i = 0; i < folders.size(); i++)
-					{
-						if (folders.get(i).isExpanded())
-						{
-							Pattern pattern = folders.get(i).mousePressed(bounds, e.getPoint());
-							if (pattern != null)
-							{
-								inFolder = true;
-								selected = pattern.clone();
-								selected.generateFullSizeImage();
-							}
-						}
-						if ((new Rectangle(bounds.x + bounds.width - folders.get(i).x,
-								bounds.y + bounds.height - folders.get(i).y,
-								(int)folders.get(i).width,
-								(int)folders.get(i).height).contains(e.getPoint())))
-						{
-							for (int j = 0; j < folders.size(); j++)
-							{
-								folders.get(j).expand(false);
-							}
-							folders.get(i).expand(true);
-							inFolder = true;
-						}
-					}
-					if (!inFolder)
-					{
-						for (int i = 0; i < folders.size(); i++)
-						{
-							folders.get(i).expand(false);
-						}
-					}
-				}
-				else if (selected != null)
-				{
-					// not consumed by toolbar or control bar, not in bounds (or invisible), left mouse button = place selection
-					Point mouseCell = info.grid.getMouseTile();
-					for (int x = 0; x < selected.width; x++)
-					{
-						for (int y = 0; y < selected.height; y++)
-						{
-							info.grid.map.set(selected.pattern[y][x], mouseCell.x + x, mouseCell.y + y);
-							try
-							{
-								//info.map.map[x + mouseCell.x][y + mouseCell.y] = selected.pattern[y][x];
-							}
-							catch (IndexOutOfBoundsException ex) { System.out.println("!"); }
-						}
-					}
-				}
-			}
-			else if (e.getButton() == MouseEvent.BUTTON3)
-			{
-				// not consumed by toolbar or control bar, right mouse button = remove selection
-				selected = null;
-			}
-		}
-		else
-		{
-			// consumed by toolbar or control bar = remove selection, check the arrow
-			selected = null;
-			if (arrowRO.bounds.contains(e.getLocationOnScreen()))
-			{
-				visible = !visible;
-				for (int i = 0; i < folders.size(); i++)
-				{
-					folders.get(i).expand(false);
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Determines whether the given MouseEvent should be consumed by the PatternSelection or whether it can continue for further processing.
-	 * 
-	 * @param e - the MouseEvent that has been generated
-	 * @return consumed - true if the MouseEvent occurred within the selection area while the PatternSelection was visible
-	 *  or if a pattern is selected and neither the Pane now the OperationBar consume the Event,
-	 *  signaling that the user is attempting to place the selected pattern; false otherwise
-	 */
-	public boolean consumed(MouseEvent e)
-	{
-		if (bounds.contains(e.getPoint()) && visible)
-		{
-			return true;
-		}
-		if (selected != null && !info.toolbar.consumed(e) && !info.controlBar.consumed(e))
-		{
-			return true;
-		}
-		return false;
-	}
-	
-	/**
-	 * Draws the PatternSelection to the given Graphics context.
-	 * If the alpha value for the PatternSelection is above 0, 
-	 *  the selection area is drawn to an image which is in turn drawn to the screen at the proper location with the current alpha value.
-	 * Regardless of the alpha value, if the selected pattern is not null, it is drawn at the current mouse location.
-	 * Also draws all Tooltips contained within the selector using the standard Graphics.
-	 * 
-	 * @param g - the current Graphics context
-	 */
-	public void draw(Graphics2D g)
-	{
-		if (alpha > 0.0001f)
-		{
-			Rectangle bounds = (Rectangle)this.bounds.clone();
-			BufferedImage bi = new BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_ARGB);
-			Graphics selectorG = bi.getGraphics();
-			selectorG.drawImage(drawSelectionAreaToImage(bounds), 0, 0, bounds.width, bounds.height, null);
-			scales[0] = scales[1] = scales[2] = scales[3] = alpha;
-			rescaler = new RescaleOp(scales, offsets, null);
-			g.drawImage(bi, rescaler, bounds.x, bounds.y);
-		}
-		if (selected != null)
-		{
-			Point mouseCell = info.grid.getMouseTile();
-			selected.img.draw((int)info.grid.toPixel(mouseCell.x - info.grid.xLoc),
-					(int)info.grid.toPixel(mouseCell.y - info.grid.yLoc), g);
-		}
-		
-		arrowTooltip.draw(g);
-		if (visible)
-		{
-			for (int i = 0; i < folders.size(); i++)
-			{
-				folders.get(i).tooltip.draw(g);
-				for (int j = 0; j < folders.get(i).names.tooltips.size(); j++)
-				{
-					folders.get(i).names.tooltips.get(j).draw(g);
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Draws the selection area which displays the folders and patterns to an image.
-	 * A translucent gray background is drawn, surrounded by a black border.
-	 * All the folders are drawn and the resultant image is returned.
-	 */
-	private BufferedImage drawSelectionAreaToImage(Rectangle bounds)
-	{
-		BufferedImage img = new BufferedImage(bounds.width, bounds.height, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g = (Graphics2D)img.getGraphics();
-		
-		g.setColor(new Color(80, 80, 80, 100));
-		g.fillRect(0, 0, bounds.width, bounds.height);
-		g.setColor(Color.black);
-		g.drawRect(0, 0, bounds.width, bounds.height);
-		g.drawRect(1, 1, bounds.width - 2, bounds.height - 2);
-		g.drawRect(2, 2, bounds.width - 4, bounds.height - 4);
-		
-		for (int i = 0; i < folders.size(); i++)
-		{
-			folders.get(i).draw(bounds, g);
-		}
-		return img;
-	}
-	
-	/**
-	 * Draws the arrow appearing on the pane along with the arrow's RollOver.
-	 * The arrow is drawn relative to the screen rather than the Pane's top-left corner.
-	 * 
-	 * @param g - the provided Graphics context
-	 */
-	public void drawToImage(Graphics2D g)
-	{
-		arrowRO.draw(-info.toolbar.x, -info.toolbar.y, g);
-		info.imageLoader.get(arrowIndex).draw(arrowRO.bounds.x - info.toolbar.x, arrowRO.bounds.y - info.toolbar.y, g);
-	}
+    private AcceleratedImage cap;
+    private ArrayList<PatternFolder> folders;
+    
+    /**
+     * The button to press to make the PatternSelector slide when it is at the "in" state.
+     */
+    private ButtonListener inSlideButton;
+    /**
+     * The button to press to make the PatternSelector slide when it is at the "out" state.
+     */
+    private ButtonListener outSlideButton;
+    
+    private static final Color fadeColor = new Color(137, 137, 137);
+    
+    private double slidePos;
+    private double fadePos;
+    private double width;
+    private double minSlidePos;
+    
+    private int maxWidth;
+    /**
+     * The distance from the sides of the pattern area to the first and last pattern folders.
+     */
+    private static final int sideBuffer = 5;
+    /**
+     * The distance between pattern folders.
+     */
+    private static final int buffer = 10;
+    private static final int maxFadeHeight = 75;
+    /**
+     * The distance from the bottom of the toolbar to the bottom of each PatternFolder, in pixels.
+     */
+    private static final int folderBottomBuffer = 40;
+    
+    private static final long slideTime = 125;
+    private static final long fadeTime = 75;
+    
+    private SelectorState state;
+    private static final String patternsFile = "patterns.txt";
+    
+    private Toolbar toolbar;
+    
+    /**
+     * Creates a new PatternSelector enclosed by the given Toolbar.
+     * 
+     * @param toolbar - the Toolbar on which to attach this PatternSelector
+     */
+    public PatternSelector(Toolbar toolbar)
+    {
+        this.toolbar = toolbar;
+        
+        try
+        {
+            loadPatterns();
+        }
+        catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+        
+        slidePos = minSlidePos;
+        fadePos = 0;
+        width = minSlidePos*maxWidth;
+        state = SelectorState.IN;
+        
+        cap = ImageLoader.load("selector_cap");
+        
+        try
+        {
+            inSlideButton = new ButtonListener(null, "slideOut", this);
+            outSlideButton = new ButtonListener(null, "slideIn", this);
+        }
+        catch (NoSuchMethodException ex)
+        {
+            ex.printStackTrace();
+        }
+        
+        new Thread(this).start();
+    }
+    
+    /**
+     * Runs this PatternSelector in its own Thread.
+     * 
+     * @see Runnable#run()
+     */
+    public void run()
+    {
+        long lastUpdate = System.nanoTime(), elapsed;
+        while (true)
+        {
+            elapsed = (System.nanoTime() - lastUpdate)/1000000;
+            onToolbarMove();
+            if (state == SelectorState.MOVING_OUT)
+            {
+                slidePos += (double)elapsed/slideTime;
+                
+                if (slidePos >= 1)
+                {
+                    slidePos = 1;
+                    state = SelectorState.FADING_IN;
+                    
+                    for (int i = 0; i < folders.size(); i++)
+                    {
+                        folders.get(i).setOn(true);
+                    }
+                }
+                
+                width = slidePos*maxWidth;
+            }
+            else if (state == SelectorState.MOVING_IN)
+            {
+                slidePos -= (double)elapsed/slideTime;
+                
+                if (slidePos <= minSlidePos)
+                {
+                    slidePos = minSlidePos;
+                    state = SelectorState.IN;
+                }
+                
+                width = slidePos*maxWidth;
+            }
+            else if (state == SelectorState.FADING_IN)
+            {
+                fadePos += (double)elapsed/fadeTime;
+                
+                if (fadePos >= 1)
+                {
+                    fadePos = 1;
+                    state = SelectorState.OUT;
+                }
+            }
+            else if (state == SelectorState.FADING_OUT)
+            {
+                fadePos -= (double)elapsed/fadeTime;
+                
+                if (fadePos <= 0)
+                {
+                    fadePos = 0;
+                    state = SelectorState.MOVING_IN;
+                    
+                    for (int i = 0; i < folders.size(); i++)
+                    {
+                        folders.get(i).setOn(false);
+                    }
+                }
+            }
+            
+            Rectangle toolbarBounds = toolbar.getBounds();
+            if (state == SelectorState.IN)
+            {
+                inSlideButton.setOn(true);
+                inSlideButton.setButton(new Rectangle(
+                        toolbarBounds.x - (int)width - cap.getWidth(), toolbarBounds.y,
+                        cap.getWidth(), cap.getHeight()));
+            }
+            else
+            {
+                inSlideButton.setOn(false);
+            }
+            
+            if (state == SelectorState.OUT)
+            {
+                outSlideButton.setOn(true);
+                outSlideButton.setButton(new Rectangle(
+                        toolbarBounds.x - (int)width - cap.getWidth(), toolbarBounds.y,
+                        cap.getWidth(), cap.getHeight()));
+            }
+            else
+            {
+                outSlideButton.setOn(false);
+            }
+            
+            lastUpdate = System.nanoTime();
+            try
+            {
+                Thread.sleep(20);
+            }
+            catch (InterruptedException ex)
+            {
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Loads the patterns from the patterns file.
+     * 
+     * @throws IOException
+     */
+    private void loadPatterns() throws IOException
+    {
+        folders = new ArrayList<PatternFolder>();
+        
+        BufferedReader in = new BufferedReader(new InputStreamReader(
+                getClass().getResourceAsStream(patternsFile)));
+        
+        String line;
+        while (true)
+        {
+            String name = in.readLine();
+            
+            if (name == null)
+            {
+                break;
+            }
+            
+            ArrayList<Pattern> patterns = new ArrayList<Pattern>();
+            
+            while (true)
+            {
+                String fullName = in.readLine();
+                
+                if (fullName.startsWith("====="))
+                {
+                    break;
+                }
+                String shortName = in.readLine();
+                
+                ArrayList<String> lines = new ArrayList<String>();
+                int maxLength = 0;
+                while (true)
+                {
+                    line = in.readLine();
+                    if (line.startsWith("###"))
+                    {
+                        break;
+                    }
+                    
+                    maxLength = Math.max(maxLength, line.length());
+                    lines.add(line);
+                }
+                
+                boolean[][] pattern = new boolean[maxLength][lines.size()];
+                
+                for (int i = 0; i < lines.size(); i++)
+                {
+                    for (int j = 0; j < lines.get(i).length(); j++)
+                    {
+                        pattern[j][i] = lines.get(i).charAt(j) == '1' || 
+                                lines.get(i).charAt(j) == 't';
+                    }
+                }
+                
+                patterns.add(new Pattern(pattern, fullName, shortName));
+            }
+            
+            folders.add(new PatternFolder(name, patterns));
+        }
+        
+        in.close();
+        
+        maxWidth = 2*sideBuffer;
+        for (int i = 0; i < folders.size(); i++)
+        {
+            maxWidth += folders.get(i).getSize().width;
+            if (i != folders.size() - 1)
+            {
+                maxWidth += buffer;
+            }
+        }
+        minSlidePos = -25.0/maxWidth;
+        onToolbarMove();
+    }
+    
+    /**
+     * This method should be invoked by the enclosing Toolbar whenever it is moved, in order that
+     *  there is no lag between the movement of the Toolbar and the PatternSelector.
+     */
+    public void onToolbarMove()
+    {
+        Rectangle toolbarBounds = toolbar.getBounds();
+        int x = (int) (toolbarBounds.x - width + sideBuffer);
+        for (int i = 0; i < folders.size(); i++)
+        {
+            folders.get(i).setLocation(new Point(x,
+                    toolbarBounds.y + toolbarBounds.height - folderBottomBuffer - 
+                    folders.get(i).getSize().height));
+            x += folders.get(i).getSize().width + buffer;
+        }
+    }
+    
+    /**
+     * Determines whether the given event should be consumed by the PatternSelector - and thus by
+     *  the enclosing Toolbar.
+     * 
+     * @param e - the triggering event
+     * @return true if the PatternSelector should consume the event and it should not be used by
+     *  any other interface components, false otherwise
+     */
+    public boolean consumed(MouseEvent e)
+    {
+        if (outSlideButton.isOn() && outSlideButton.getButton().contains(e.getPoint()))
+        {
+            return true;
+        }
+        if (inSlideButton.isOn() && inSlideButton.getButton().contains(e.getPoint()))
+        {
+            return true;
+        }
+        
+        Rectangle toolbarBounds = toolbar.getBounds();
+        int height = getHeight();
+        return new Rectangle((int) (toolbarBounds.x - width - cap.getWidth()),
+                toolbarBounds.y + toolbarBounds.height - height,
+                (int) (cap.getWidth() + width), height).contains(e.getLocationOnScreen());
+    }
+    
+    /**
+     * Slides the PatternSelector out.
+     */
+    public void slideOut()
+    {
+        state = SelectorState.MOVING_OUT;
+    }
+    
+    /**
+     * Slides the PatternSelector in.
+     */
+    public void slideIn()
+    {
+        state = SelectorState.FADING_OUT;
+    }
+    
+    /**
+     * Gets the height of this PatternSelector, which is determined primarily by the maximum height
+     *  of each PatternFolder.
+     * 
+     * @return the height of this PatternSelector
+     */
+    private int getHeight()
+    {
+        int height = toolbar.getBounds().height;
+        for (int i = 0; i < folders.size(); i++)
+        {
+            height = Math.max(height, 40 + folders.get(i).getSize().height);
+        }
+        return height;
+    }
+    
+    public void draw(float alpha, Graphics2D g)
+    {
+        Rectangle toolbarBounds = toolbar.getBounds();
+        
+        AcceleratedImage img = new AcceleratedImage((int)(width + cap.getWidth() + toolbar.getArc()/2), getHeight());
+        Graphics2D gImg = (Graphics2D) img.getContents().getGraphics();
+        
+        if (slidePos > 0)
+        {
+            gImg.setColor(Toolbar.backgroundColor);
+            gImg.fillRect(cap.getWidth()/2, img.getHeight() - 25, img.getWidth(), 10);
+            
+            gImg.setColor(Toolbar.borderColor);
+            gImg.setStroke(new BasicStroke(3));
+            gImg.drawRect(cap.getWidth()/2, img.getHeight() - 25, img.getWidth(), 10);
+            
+            if (fadePos > 0)
+            {
+                float[] fractions = { 0, 1 };
+                Color[] colors = { fadeColor, new Color(0, 0, 0, 0) };
+                gImg.setPaint(new LinearGradientPaint(
+                        new Point2D.Double(0, img.getHeight() - 25),
+                        new Point2D.Double(0, img.getHeight() - 25 - fadePos*maxFadeHeight),
+                        fractions, colors));
+                gImg.fillRect(cap.getWidth()/2, img.getHeight() - 25 - maxFadeHeight,
+                        img.getWidth(), maxFadeHeight);
+            }
+        }
+        
+        cap.draw(0, img.getHeight() - cap.getHeight(), gImg);
+        
+        img.setTransparency(alpha);
+        img.draw(toolbarBounds.x - img.getWidth() + toolbar.getArc()/2,
+                toolbarBounds.y - img.getHeight() + toolbarBounds.height, g);
+        
+        for (int i = 0; i < folders.size(); i++)
+        {
+            folders.get(i).draw((float)(fadePos*alpha), g);
+        }
+    }
+    
+    /**
+     * Defines the possible states of the PatternSelector.
+     * 
+     * @author zirbinator
+     */
+    private enum SelectorState
+    {
+        IN,
+        MOVING_OUT,
+        FADING_IN,
+        OUT,
+        FADING_OUT,
+        MOVING_IN;
+    }
 }
