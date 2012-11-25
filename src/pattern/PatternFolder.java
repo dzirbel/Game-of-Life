@@ -1,338 +1,548 @@
 package pattern;
 
+import graphics.AcceleratedImage;
+import image.ImageLoader;
+import io.Listener;
+
 import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
-import java.awt.image.RescaleOp;
-import java.io.File;
 import java.util.ArrayList;
 
-import main.Information;
-import main.Tooltip;
+import utils.ListUtil;
+
+import main.GameOfLife;
 
 /**
- * Represents a single folder in which pattern data files are stored.
- * Each folder is responsible for loading and storing data for all the patterns within the location given upon initialization.
- * Additionally, folders are used when selecting patterns from the PatternSelector.
- * The folder's have an x and y coordinate system relative only to the boundaries of the PatternSelector, 
- *  so that each folder has no knowledge of its position on the screen.
- * Thus, when drawn, each folder draws directly onto an image kept by the PatternSelector which is then rendered onto the screen.
- * Additionally, the coordinates of the PatternFolders are equal to the distance from the bottom right corner of the PatternSelector,
- *  so that moving up and left is equal to positive change in the x and y coordinates.
- * This is so that, when expanding, the end coordinates of the expansion are easier to determine and the other folders can be moved more simply.
- * Each folder creates an icon composed of a front and back folder image and images representing the patterns within the folder.
- * These folders are displayed horizontally from the pattern selector menu, showing only the folder image and the pattern icons.
- * When clicked on, a folder expands both vertically and horizontally, showing the names of the patterns that it contains.
- * The PatternNameBox used is given coordinates relative to the location of the folder rather than the PatternSelector.
+ * Represents a folder of {@link Pattern}s.
+ * Each PatternFolder holds a list of {@link Pattern}s and a name associated with the folder,
+ *  and is primarily responsible for drawing a visual pattern and allowing the user to select
+ *  patterns via mouse input, in conjunction with a {@link PatternSelector}.
  * 
- * @author Dominic
+ * @author zirbinator
  */
-public class PatternFolder
+public class PatternFolder implements Runnable
 {
-	public ArrayList<PatternIcon> patterns;
-	
-	private boolean expanded;
-	private boolean changing;
-	
-	public double width;
-	public double height;
-	private double folderX = 0;						// the folder image's distance from x,y when expanded - will increase if expanding, decrease if retracting
-	private double folderY = 0;						// the folder image's distance from x,y when expanded - will increase if expanding, decrease if retracting
-	private double folderXExpanded;					// the folder image's distance from x,y when fully expanded
-	private double folderYExpanded;					// the folder image's distance from x,y when fully expanded
-	private double folderXSpeed;					// the speed that the folder image's x-coordinate moves in px/ms
-	private double folderYSpeed;					// the speed that the folder image's y-coordinate moves in px/ms
-	private double namesHeightSpeed;				// the speed that the PatternNameBox's height and y-coordinate moves in px/ms
-	private double widthSpeed;						// the speed that the width of the folder's bounding box moves in px/ms
-	private double heightSpeed;						// the speed that the height of the folder's bounding box moves in px/ms
-	private static double THETA = Math.PI/2;		// the total sweep of the pattern icons in radians
-	private static double ROTATION = Math.PI/3;		// the total change in the rotation of the icons in radians
-	
-	private float[] scales = {0.9f, 0.9f, 0.9f, 0.9f};
-	private float[] offsets = new float[4];
-	
-	private Information info;
-	private int frontIndex;
-	private int backIndex;
-	public int x;									// distance from the right side of the PatternSelector
-	public int y;									// distance from the bottom of the PatternSelector
-	public int expandedWidth = 250;					// the width of the bounding box when fully expanded, in px
-	public int expandedHeight;						// the height of the bounding box when fully expanded, in px
-	public static int FOLDER_WIDTH = 125;			// the width of the folder image in px
-	public static int FOLDER_HEIGHT = 125;			// the height of the folder image in px
-	public static int ICON_WIDTH = 40;				// the width of a pattern icon in px
-	public static int ICON_HEIGHT = 40;				// the height of a pattern icon in px
-	private static int TOP_BUFFER = 20;				// the distance from the top of the bounding box to the top of the folder
-	private static int MIDDLE_BUFFER = 30;			// the distance from the bottom of the folder to the top of the name box
-	private static int BOTTOM_BUFFER = 10;			// the distance from the bottom of the bounding box to bottom of the name box
-	private static int SIDE_BUFFER = 15;			// the distance from the sides of the bounding box to the name box
-	
-	private static long expansionTime = 200;		// the amount of time to fully expand in ms
-	private long lastUpdate = 0;
-	
-	public PatternNameBox names;
-	private static Point center = new Point(0, FOLDER_HEIGHT/3);
-	
-	private RescaleOp rescaler;
-	
-	public String location;
-	public String name;
-	
-	public Thread tooltipThread;
-	public Tooltip tooltip;
-	
-	/**
-	 * Creates a new PatternFolder with the given folder location, x and y coordinates, and Information.
-	 * 
-	 * @param location - the filename in which all the patterns are stored
-	 * @param x - the x-coordinate of this folder, relative to the bottom-right corner of the pattern selector box
-	 * @param y - the y-coordinate of this folder, relative to the bottom-right corner of the pattern selector box
-	 * @param info - the current Information
-	 */
-	public PatternFolder(String location, int x, int y, Information info)
-	{
-		this.location = location;
-		this.x = x;
-		this.y = y;
-		this.info = info;
-		width = FOLDER_WIDTH;
-		height = FOLDER_HEIGHT;
-		patterns = new ArrayList<PatternIcon>();
-		frontIndex = info.imageLoader.getIndex("folderFront");
-		backIndex = info.imageLoader.getIndex("folderBack");
-		expanded = false;
-		changing = false;
-		rescaler = new RescaleOp(scales, offsets, null);		
-		
-		File folder = new File(location);
-		name = folder.getName();
-		File[] files = folder.listFiles();
-		for (int i = 0; i < files.length; i++)
-		{
-			patterns.add(new PatternIcon(0, 0, Pattern.load(files[i].getPath(), ICON_WIDTH, ICON_HEIGHT, info), info));
-		}
-		
-		setIcons();
-		
-		for (int i = 0; i < patterns.size(); i++)
-		{
-			patterns.get(i).setRotation(-(ROTATION/2) + (ROTATION/patterns.size())*i);
-		}
-		
-		names = new PatternNameBox(this, new Rectangle(SIDE_BUFFER, FOLDER_HEIGHT - BOTTOM_BUFFER, expandedWidth - SIDE_BUFFER*2, 0), info);
-		
-		expandedHeight = TOP_BUFFER + FOLDER_HEIGHT + MIDDLE_BUFFER + names.expandedHeight + BOTTOM_BUFFER;
-		folderXExpanded = (expandedWidth - FOLDER_WIDTH)/2;
-		folderYExpanded = TOP_BUFFER;
-		
-		names.setLocation(SIDE_BUFFER, expandedHeight - BOTTOM_BUFFER - names.expandedHeight);
-		
-		tooltip = new Tooltip(new Rectangle(0, 0, 0, 0), new String(name + " Patterns"), info);
-		tooltipThread = new Thread(tooltip);
-		tooltipThread.start();
-	}
-	
-	/**
-	 * Moves the components of the folder if the changing flag is true, meanging that the components should still be in motion.
-	 * The time since the last update is found and used to calculate the change of each component given the speeds calculated when
-	 *  an expansion or retraction is begun.
-	 * The bounds on the PatternSelector are adjusted in each update.
-	 * As soon as any of the components, and theoretically all of them,
-	 *  reach its destination location, all the components are set to their destinations and cease movement.
-	 */
-	public void update()
-	{
-		tooltip.bounds.x = info.toolbar.selector.bounds.x + info.toolbar.selector.bounds.width - x;
-		tooltip.bounds.y = info.toolbar.selector.bounds.y + info.toolbar.selector.bounds.height - y;
-		if (changing)
-		{
-			long timeElapsed = (System.nanoTime() - lastUpdate)/1000000;	// ms
-			folderX += folderXSpeed*timeElapsed;
-			folderY += folderYSpeed*timeElapsed;
-			width += widthSpeed*timeElapsed;
-			height += heightSpeed*timeElapsed;
-			names.bounds.height += namesHeightSpeed*timeElapsed;
-			names.setLocation(names.bounds.x, names.bounds.y - (int)(namesHeightSpeed*timeElapsed));
-			if (expanded)
-			{
-				// moving from 0,0 to folderX,folderY; WIDTH to expandedWidth; HEIGHT to expandedHeight: expanding
-				tooltip.bounds = new Rectangle();
-				if (folderX > folderXExpanded || folderY > folderYExpanded || width > expandedWidth || height > expandedHeight)
-				{
-					folderX = folderXExpanded;
-					folderY = folderYExpanded;
-					width = expandedWidth;
-					height = expandedHeight;
-					names.bounds.height = names.expandedHeight;
-					names.bounds.y = (int)folderY + FOLDER_HEIGHT + MIDDLE_BUFFER;
-					changing = false;
-				}
-			}
-			else
-			{
-				// moving from folderX,folderY to 0,0; expandedWidth to WIDTH; expandedHeight to HEIGHT: retracting
-				tooltip.bounds = new Rectangle(info.toolbar.selector.bounds.x + info.toolbar.selector.bounds.width - x,
-						info.toolbar.selector.bounds.y + info.toolbar.selector.bounds.height - y, FOLDER_WIDTH, FOLDER_HEIGHT);
-				if (folderX < 0 || folderY < 0 || width < FOLDER_WIDTH || height < FOLDER_HEIGHT)
-				{
-					folderX = 0;
-					folderY = 0;
-					width = FOLDER_WIDTH;
-					height = FOLDER_HEIGHT;
-					changing = false;
-				}
-			}
-			info.toolbar.selector.setBounds(PatternSelector.FOLDER_EXPAND);
-			lastUpdate = System.nanoTime();
-		}
-	}
-	
-	/**
-	 * Sets the location of the folder to the given coordinates and adjusts the icons.
-	 * 
-	 * @param x - the x-coordinate, the distance from the right side of the PatternSelector box, in pixels
-	 * @param y - the y-coordinate, the distance from the bottom of the PatternSelector box, in pixels
-	 */
-	public void setLocation(int x, int y)
-	{
-		this.x = x;
-		this.y = y;
-		setIcons();
-	}
-	
-	/**
-	 * Sets the locations of the PatternIcons relative to the coordinates of this PatternFolder.
-	 * Each icon is set to a location on a circle extending from the left side of the folder icon toward the right side.
-	 * This circle has a center at 0,FOLDER_HEIGHT/3 and radius of half the height.
-	 * The portion of the circle where icons are located runs from -THETA/2 to THETA/2, where THETA is PI/2 (90 degrees).
-	 * Each pattern icon is set shifted by the center location, where the center of the circle lies, relative to the coordinates of this folder.
-	 * Then the icon is shifted by the radius of the circle times the cosine (for the x) or sine (for the y).
-	 */
-	public void setIcons()
-	{
-		double radius = FOLDER_HEIGHT/2;
-		for (int i = 0; i < patterns.size(); i++)
-		{
-			double thetaI = -THETA/2 + i*(THETA/patterns.size());
-			int xLoc = (int)Math.round(Math.cos(thetaI)*radius + center.x);
-			int yLoc = (int)Math.round(Math.sin(thetaI)*radius + center.y);
-			patterns.get(i).setLocation(xLoc, yLoc);
-		}
-	}
-	
-	/**
-	 * Expands or retracts this folder according to the given boolean.
-	 * Depending on the given boolean, speeds of various moving components are calculated 
-	 *  in pixels per millisecond according to the total time of an expansion or retraction.
-	 * 
-	 * @param expand - true if the folder should expand, false if it should retract
-	 */
-	public void expand(boolean expand)
-	{
-		if (expand)
-		{
-			folderXSpeed = folderXExpanded/expansionTime;							// px/ms
-			folderYSpeed = folderYExpanded/expansionTime;							// px/ms
-			widthSpeed = (expandedWidth - (double)FOLDER_WIDTH)/expansionTime;		// px/ms
-			heightSpeed = (expandedHeight - (double)FOLDER_HEIGHT)/expansionTime;	// px/ms
-			namesHeightSpeed = names.expandedHeight/expansionTime;					// px/ms
-			changing = true;
-			lastUpdate = System.nanoTime();
-		}
-		else
-		{
-			folderXSpeed = -folderXExpanded/expansionTime;							// px/ms
-			folderYSpeed = -folderYExpanded/expansionTime;							// px/ms
-			widthSpeed = (FOLDER_WIDTH - (double)expandedWidth)/expansionTime;		// px/ms
-			heightSpeed = (FOLDER_HEIGHT - (double)expandedHeight)/expansionTime;	// px/ms
-			namesHeightSpeed = -names.expandedHeight/expansionTime;					// px/ms
-			changing = true;
-			lastUpdate = System.nanoTime();
-		}
-		expanded = expand;
-	}
-	
-	/**
-	 * Returns true if this folder is expanded and false if it is not.
-	 * 
-	 * @return expanded - true if the folder is expanded, false otherwise
-	 */
-	public boolean isExpanded()
-	{
-		return expanded;
-	}
-	
-	/**
-	 * Returns the Pattern whose name was clicked on at the given point if the folder is fully expanded.
-	 * Null is returned if the pattern is not expanded, the name box was not clicked on, or the name box returns a faulty name.
-	 * 
-	 * @param bounds - the boundary box of the PatternSelector, used to convert from the on-screen coordinates to the native coordinates used by this folder
-	 * @param point - the location of the mouse click on the screen
-	 * @return pattern - the pattern that was selected, null if none was clicked on
-	 */
-	public Pattern mousePressed(Rectangle bounds, Point point)
-	{
-		if (expanded && !changing)
-		{
-			String name = names.mousePressed(new Point(point.x - bounds.x - (bounds.width - x), point.y - bounds.y - (bounds.height - y)));
-			if (name == null)
-			{
-				return null;
-			}
-			for (int i = 0; i < patterns.size(); i++)
-			{
-				if (patterns.get(i).getName().equals(name))
-				{
-					return patterns.get(i).getPattern();
-				}
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * Draws this folder with the given Graphics2D and the PatternSelector's boundary box.
-	 * First, the native x and y coordinates are converted to the coordinate system used to draw relative to the top-left corner of the PatternSelector.
-	 * Then, the back of the folder image is drawn followed by the pattern icons.
-	 * If the folder is expanded, the PatternNameBox is drawn.
-	 * Last the front of the folder image is drawn and then the name of the folder.
-	 * 
-	 * @param bounds - the bounding box of the PatternSelector
-	 * @param g - the Graphics context used by the PatternSelector to render the selection box to an image
-	 */
-	public void draw(Rectangle bounds, Graphics2D g)
-	{
-		int x = bounds.width - this.x;
-		int y = bounds.height - this.y;
-		
-		info.imageLoader.get(backIndex).draw((int)folderX + x, (int)folderY + y, g);
-		AffineTransform transform = new AffineTransform();
-		for (int i = 0; i < patterns.size(); i++)
-		{
-			transform.setToTranslation(folderX + x, folderY + y);
-			g.setTransform(transform);
-			patterns.get(i).draw(rescaler, g);
-		}
-		g.setTransform(new AffineTransform());
-		
-		if (expanded)
-		{
-			g.setClip(new Rectangle(0, y, info.screen.width, (int)height));
-			transform = new AffineTransform();
-			double expandedX = x - (expandedWidth - width)/2;
-			transform.translate(expandedX, y);
-			g.setTransform(transform);
-			names.draw(g);
-			g.setClip(null);
-		}
-		info.imageLoader.get(frontIndex).draw((int)folderX + x, (int)folderY + y, g);
-		
-		g.setColor(Color.black);
-		g.setFont(Information.fontBold);
-		g.drawString(name, (int)folderX + x + 15, y + FOLDER_HEIGHT);
-		g.setColor(Information.lightBlue);
-		g.drawString(name, (int)folderX + x + 15 - 1, y + FOLDER_HEIGHT - 1);
-	}
+    private AcceleratedImage folderBack;
+    private AcceleratedImage folderFront;
+    private ArrayList<Pattern> patterns;
+    private ArrayList<AcceleratedImage> thumbs;
+    
+    private boolean on;
+    /**
+     * Whether the user is currently hovering the mouse over the folder image.
+     */
+    private boolean hoveringFolder;
+    
+    private static final Color nameColor = new Color(0, 163, 231);
+    private static final Color nameShadowColor = Color.black;
+    private static final Color patternNameColor = new Color(10, 10, 10);
+    private static final Color patternBoxBorder = new Color(12, 12, 12);
+    private static final Color patternBoxBackground = new Color(50, 50, 50);
+    
+    private Dimension size;
+    /**
+     * The amount that the PatternFolder is open, in the range [0, 1], where 0 is entirely closed
+     *  and 1 is entirely open.
+     */
+    private double openAmount;
+    /**
+     * The amount that the folder image is shown as "open", in the range [0, maxFolderOpenAmount],
+     *  where 0 is shown as completely closed and maxFolderOpenAmount is shown as open as possible.
+     */
+    private double folderOpenAmount;
+    private static final double maxFolderOpenAmount = 0.2;
+    
+    private FolderState state;
+    private static final Font nameFont = new Font(Font.SANS_SERIF, Font.ITALIC, 14);
+    private static final Font patternNameFont = new Font(Font.SANS_SERIF, Font.PLAIN, 11);
+    private static final Metrics nameMetrics = new Metrics(nameFont);
+    
+    /**
+     * The width of the entire PatternFolder depiction, in pixels.
+     */
+    private static final int width = 175;
+    /**
+     * The distance between the bottom of the PatternFolder depiction and folder image, in pixels.
+     */
+    private static final int bottomBuffer = 20;
+    /**
+     * The distance between the top of the PatternFolder and the folder image, in pixels.
+     * This is used as a cautionary butter in case the pattern thumbs go above the folder.
+     */
+    private static final int topBuffer = 25;
+    /**
+     * The size of the folder image on the screen, in pixels.
+     */
+    private static final int folderSize = 75;
+    /**
+     * The size of the PatternFolder depiction when it is closed, in pixels.
+     */
+    private static final int closedHeight = bottomBuffer + folderSize + topBuffer;
+    /**
+     * The size of the PatternFolder depiction when it is open, in pixels.
+     * This height is also used when it is closing or opening.
+     * The open height is necessarily calculated when the patterns are set, as it is based off the
+     *  number of patterns held by the PatternFolder.
+     */
+    private int openHeight;
+    private int selected;
+    /**
+     * The height of a single pattern in the PatternFolder depiction when it is open.
+     */
+    private static final int patternHeight = 22;
+    
+    private static final long period = 15;
+    /**
+     * The time it takes to go from completely closed to completely open, in milliseconds
+     */
+    private static final long openTime = 100;
+    
+    /**
+     * The location of the PatternFolder depiction on the screen, in pixels.
+     * This should be controlled by the enclosing PatternSelector, along with the on/off state.
+     */
+    private Point location;
+    /**
+     * The location of the name in the PatternFolder depiction, in pixels, relative to
+     *  {@link #location}.
+     */
+    private Point nameLocation;
+    /**
+     * The location of the folder in the PatternFolder depiction, in pixels.
+     * The x-coordinate is the distance from the left side of the depiction, and the y-coordinate
+     *  is the positive distance from the bottom of the depiction.
+     */
+    private Point folderLocation;
+    /**
+     * The requested folder location when the PatternFolder is closed.
+     * The x-coordinate is the distance from the left side of the depiction, and the y-coordinate
+     *  is the positive distance from the bottom of the depiction.
+     */
+    private static final Point closedFolderLocation = new Point((width - folderSize)/2,
+            bottomBuffer + folderSize);
+    /**
+     * The requested folder location when the PatternFolder is open.
+     * The x-coordinate is the distance from the left side of the depiction, and the y-coordinate
+     *  is the positive distance from the bottom of the depiction.
+     */
+    private static final Point openFolderLocation = new Point(0, closedFolderLocation.y);
+    
+    /**
+     * The name of this PatternFolder.
+     */
+    private String name;
+    
+    /**
+     * Creates a new PatternFolder with the given name and patterns.
+     * The folder is closed by default.
+     * 
+     * @param name - the name of this PatternFolder
+     * @param patterns - the Patterns held by this PatternFolder
+     */
+    public PatternFolder(String name, ArrayList<Pattern> patterns)
+    {
+        setName(name);
+        setPatterns(patterns);
+        
+        on = false;
+        hoveringFolder = false;
+        state = FolderState.CLOSED;
+        openAmount = 0;
+        folderOpenAmount = 0;
+        selected = -1;
+        folderLocation = new Point(closedFolderLocation);
+        size = new Dimension(width, closedHeight);
+        
+        folderBack = ImageLoader.load("folder_back");
+        folderFront = ImageLoader.load("folder_front");
+        folderBack.resize(folderSize, folderSize);
+        folderFront.resize(folderSize, folderSize);
+        
+        Listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_MOVED);
+        Listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED);
+        
+        new Thread(this).start();
+    }
+    
+    /**
+     * Runs this PatternFolder in a separate thread.
+     * 
+     * @see Runnable#run()
+     */
+    public void run()
+    {
+        long lastUpdate = System.nanoTime(), elapsed;
+        while (true)
+        {
+            elapsed = (System.nanoTime() - lastUpdate)/1000000;
+            
+            if (state == FolderState.OPENING)
+            {
+                openAmount += (double)elapsed/openTime;
+                
+                if (openAmount >= 1)
+                {
+                    openAmount = 1;
+                    state = FolderState.OPEN;
+                    findSize();
+                }
+            }
+            else if (state == FolderState.CLOSING)
+            {
+                openAmount -= (double)elapsed/openTime;
+                
+                if (openAmount <= 0)
+                {
+                    openAmount = 0;
+                    state = FolderState.CLOSED;
+                    findSize();
+                }
+            }
+            folderLocation.x = (int) (openAmount*openFolderLocation.x + (1 - openAmount)*closedFolderLocation.x);
+            
+            if (hoveringFolder || state == FolderState.OPEN || state == FolderState.OPENING)
+            {
+                folderOpenAmount = maxFolderOpenAmount;
+            }
+            else
+            {
+                folderOpenAmount = 0;
+            }
+            
+            lastUpdate = System.nanoTime();
+            try
+            {
+                Thread.sleep(period);
+            }
+            catch (InterruptedException ex)
+            {
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Gets the name of this PatternFolder, typically used as a generic categorization of its
+     *  patterns and displayed along with the folder.
+     * 
+     * @return the name of this PatternFolder
+     * @see #setName(String)
+     */
+    public String getName()
+    {
+        return name;
+    }
+    
+    /**
+     * Sets the name of this PatternFolder, typically used as a generic categorization of its
+     *  patterns and displayed along with the folder.
+     * 
+     * @param name - the new name of this PatternFolder
+     * @see #getName()
+     */
+    public void setName(String name)
+    {
+        this.name = name;
+        nameLocation = null;
+    }
+    
+    /**
+     * Sets the patterns held by this PatternFolder.
+     * Note that this should be done sparingly, as it is necessary to sort them and generate
+     *  thumbnail images for each pattern, which can be time-consuming.
+     * 
+     * @param patterns - the patterns to be held by this PatternFolder
+     */
+    public void setPatterns(ArrayList<Pattern> patterns)
+    {
+        this.patterns = patterns;
+        ListUtil.sort(this.patterns);
+        thumbs = new ArrayList<AcceleratedImage>();
+        for (int i = 0; i < this.patterns.size(); i++)
+        {
+            thumbs.add(this.patterns.get(i).generateThumb(patternHeight - 2, patternHeight - 2));
+        }
+        openHeight = Math.max(closedHeight,
+                bottomBuffer + this.patterns.size()*patternHeight + topBuffer);
+    }
+    
+    /**
+     * Determines whether this PatternFolder is currently in the "on" state, signifying that it
+     *  will respond to input.
+     * 
+     * @return true if this PatternFolder is reacting to user input, false otherwise
+     * @see #setOn(boolean)
+     */
+    public boolean isOn()
+    {
+        return on;
+    }
+    
+    /**
+     * Sets the "on" state of this PatternFolder, used to signify whether it should respond to user
+     *  input.
+     * 
+     * @param on - true if this PatternFolder is currently visible on the screen and should be
+     *  reacting to user input, false otherwise
+     * @see #isOn()
+     */
+    public void setOn(boolean on)
+    {
+        this.on = on;
+    }
+    
+    /**
+     * Gets the current size of this PatternFolder.
+     * 
+     * @return the size of the PatternFolder, in pixels
+     */
+    public Dimension getSize()
+    {
+        return (Dimension) size.clone();
+    }
+    
+    /**
+     * Gets the location of this PatternFolder on the screen.
+     * 
+     * @return the current location of this PatternFolder on the screen, in pixels
+     * @see #setLocation(Point)
+     */
+    public Point getLocation()
+    {
+        return new Point(location);
+    }
+    
+    /**
+     * Sets the location of this PatternFolder on the screen.
+     * 
+     * @param location - the location of this PatternFolder on the screen, in pixels
+     * @see #getLocation()
+     */
+    public void setLocation(Point location)
+    {
+        this.location = new Point(location);
+    }
+    
+    /**
+     * Gets the area in which the folder should be shown on the screen.
+     * 
+     * @return the area of the screen which should contain the folder image
+     */
+    private Rectangle getFolderArea()
+    {
+        return new Rectangle(location.x + folderLocation.x,
+                location.y + size.height - folderLocation.y,
+                folderSize, folderSize);
+    }
+    
+    /**
+     * Gets the box in which the pattern at the given index should be displayed.
+     * This box is relative to location rather than the screen in general; thus, for example, if
+     *  checking whether the mouse is hovering over a certain box, the x- and y-coordinate of the
+     *  box must be incremented by location.
+     * 
+     * @param patternIndex - the index of the pattern for which to find the box
+     * @return the box in which the pattern should be shown
+     */
+    private Rectangle getPatternBox(int patternIndex)
+    {
+        return new Rectangle(openFolderLocation.x + folderSize,
+                size.height - bottomBuffer - (patternIndex + 1)*patternHeight,
+                size.width - (openFolderLocation.x + folderSize), patternHeight);
+    }
+    
+    /**
+     * Finds the current size of this PatternFolder.
+     * The size is only affected by the state, and so this should be called whenever the state is
+     *  changed.
+     */
+    private void findSize()
+    {
+        if (state == FolderState.CLOSED)
+        {
+            size = new Dimension(width, closedHeight);
+        }
+        else
+        {
+            size = new Dimension(width, openHeight);
+        }
+        synchronized (nameLocation)
+        {
+            nameLocation = null;
+        }
+    }
+    
+    /**
+     * Invoked when the mouse is moved.
+     * 
+     * @param e - the triggering event
+     */
+    public synchronized void mouseMoved(MouseEvent e)
+    {
+        hoveringFolder = on && getFolderArea().contains(e.getLocationOnScreen());
+        
+        selected = -1;
+        if (state == FolderState.OPEN)
+        {
+            for (int i = 0; i < patterns.size(); i++)
+            {
+                Rectangle box = getPatternBox(i);
+                box.x += location.x;
+                box.y += location.y;
+                if (box.contains(e.getLocationOnScreen()))
+                {
+                    selected = i;
+                }
+            }
+        }
+    }
+    
+    /**
+     * Invoked when the mouse is pressed.
+     * 
+     * @param e - the triggering event
+     */
+    public synchronized void mousePressed(MouseEvent e)
+    {
+        if (on && getFolderArea().contains(e.getLocationOnScreen()))
+        {
+            if (state == FolderState.CLOSED)
+            {
+                state = FolderState.OPENING;
+                findSize();
+            }
+            else if (state == FolderState.OPEN)
+            {
+                state = FolderState.CLOSING;
+                findSize();
+            }
+        }
+        
+        if (on && selected != -1)
+        {
+            GameOfLife.getGrid().setSelectedPattern(patterns.get(selected));
+        }
+    }
+    
+    /**
+     * Draws this PatternFolder.
+     * The PatternFolder is drawn relative to the screen.
+     * 
+     * @param alpha - the transparency with which the PatternFolder should be drawn
+     * @param g - the graphics context
+     */
+    public synchronized void draw(float alpha, Graphics2D g)
+    {
+        AcceleratedImage img = new AcceleratedImage(size.width, size.height);
+        Graphics2D gImg = (Graphics2D) img.getContents().getGraphics();
+        
+        if (nameLocation == null)
+        {
+            nameLocation = new Point((int) (size.width - nameMetrics.getStringBounds(name, gImg).getWidth() - 15),
+                    size.height - (bottomBuffer - nameFont.getSize())/2);
+        }
+        synchronized (nameLocation)
+        {
+            gImg.setFont(nameFont);
+            gImg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            gImg.setColor(nameShadowColor);
+            gImg.drawString(name, nameLocation.x + 1, nameLocation.y + 1);
+            gImg.setColor(nameColor);
+            gImg.drawString(name, nameLocation.x, nameLocation.y);
+            gImg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+        }
+        
+        folderBack.draw(folderLocation.x, size.height - folderLocation.y, gImg);
+        folderFront.setScale(1 - folderOpenAmount, 1);
+        folderFront.draw(folderLocation.x, size.height - folderLocation.y, gImg);
+        
+        if (state != FolderState.CLOSED)
+        {
+            AcceleratedImage patternsImg = new AcceleratedImage(
+                    size.width - (openFolderLocation.x + folderSize), patterns.size()*patternHeight);
+            Graphics2D gPatterns = (Graphics2D) patternsImg.getContents().getGraphics();
+            AffineTransform t = new AffineTransform();
+            t.setToTranslation(-openFolderLocation.x - folderSize, -size.height + bottomBuffer + patterns.size()*patternHeight);
+            gPatterns.setTransform(t);
+            
+            for (int i = 0; i < patterns.size(); i++)
+            {
+                drawPatternBox(i, gPatterns);
+            }
+            
+            patternsImg.setTransparency((float) openAmount);
+            patternsImg.draw(openFolderLocation.x + folderSize,
+                    size.height - bottomBuffer - (patterns.size())*patternHeight, gImg);
+        }
+        
+        img.setTransparency(alpha);
+        img.draw(location.x, location.y, g);
+    }
+    
+    /**
+     * Draws the box giving information regarding the pattern at the given index.
+     * The drawing is done relative to location, as given by {@link #getPatternBox(int)}.
+     * 
+     * @param patternIndex - the index of the pattern to depict
+     * @param g - the graphics context
+     * @see #getPatternBox(int)
+     */
+    private void drawPatternBox(int patternIndex, Graphics2D g)
+    {
+        Rectangle box = getPatternBox(patternIndex);
+        g.setColor(patternBoxBorder);
+        g.fillRect(box.x, box.y, box.width, box.height);
+        g.setColor(patternBoxBackground);
+        g.fillRect(box.x + 1, box.y + 1, box.width - 2, box.height - 2);
+        
+        thumbs.get(patternIndex).draw(box.x + 1, box.y + 1, g);
+        
+        if (selected == patternIndex)
+        {
+            g.setColor(new Color(0, 163, 231));
+            g.drawRect(box.x + box.height, box.y + 2, box.width - box.height - 3, box.height - 5);
+        }
+        
+        g.setColor(patternNameColor);
+        g.setFont(patternNameFont);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g.drawString(patterns.get(patternIndex).shortName, box.x + box.height + 3, box.y + box.height - 5);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+    }
+    
+    /**
+     * A trivial implementation of {@link FontMetrics} to provide its capabilities.
+     * 
+     * @author zirbinator
+     */
+    private static class Metrics extends FontMetrics
+    {
+        private static final long serialVersionUID = 1L;
+
+        protected Metrics(Font f)
+        {
+            super(f);
+        }
+    }
+    
+    /**
+     * Represents the state of a PatternFolder.
+     * 
+     * @author zirbinator
+     */
+    private static enum FolderState
+    {
+        CLOSED,
+        OPENING,
+        OPEN,
+        CLOSING;
+    }
 }

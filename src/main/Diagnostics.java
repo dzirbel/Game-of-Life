@@ -1,415 +1,359 @@
 package main;
 
+import graphics.DisplayMonitor;
 import io.Listener;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 /**
- * This class represents a collection of methods useful for giving diagnostic information.
- * The diagnostic view can be toggled with the F3 key.
- * Along the bottom of the screen is a graph of the times for various aspects of the rendering cycle over time in ms.
- * At the top-left of the screen, a small box of general information shows the current location of the mouse on the screen.
- * Below it, a box gives information about the current state of the Grid and acts as a graph of the time that simulating single generations take.
- * Finally, on the left of the screen is a display of the Java Heap usage.
+ * Keeps track of diagnostic information and displays diagnostics on the screen.
+ * The diagnostics are automatically toggled with the "F3" key.
  * 
- * @author Dominic
+ * @author zirbinator
  */
 public class Diagnostics
 {
-	private ArrayList<Long> drawTimes;
-	private ArrayList<Long> renderTimes;
-	private ArrayList<Long> sleepTimes;
-	private ArrayList<Long> simulationTimes;
-	
-	private boolean visible;
-	
-	private static Color red = new Color(215, 0, 0);
-	private static Color yellow = new Color(237, 201, 0);
-	private static Color green = new Color(11, 159, 0);
-	private static Color blue = new Color(0, 64, 156);
-	private static Color purple = new Color(108, 0, 156);
-	private static Color gray = new Color(130, 130, 130);
-	
-	private DecimalFormat df;
-	
-	private Information info;
-	private static int graphYShift = 50;
-	private static int graphXShift = 75;
-	private static int graphHeight = 400;
-	private static int graphVerticalDivision = 50;
-	private static int graphDivisionSize = 7;
-	private static int legendIconSize = 20;
-	private static int legendTextSize = 100;
-	private static int legendBuffer = 5;
-	private static int gridInfoWidth = 450;
-	private static int gridInfoHeight = 200;
-	private static int generalInfoWidth = 250;
-	private static int generalInfoHeight = 70;
-	private static int heapWidth = 300;
-	private static int heapHeight = 30;
-	
-	/**
-	 * Creates a new Diagnostics object with the given Information.
-	 * 
-	 * @param info - the global Information
-	 */
-	public Diagnostics(Information info)
-	{
-		this.info = info;
-		visible = false;
-		drawTimes = new ArrayList<Long>();
-		renderTimes = new ArrayList<Long>();
-		sleepTimes = new ArrayList<Long>();
-		simulationTimes = new ArrayList<Long>();
-		df = new DecimalFormat("0.00");
-		
-		info.listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
-	}
-	
-	/**
-	 * Invoked when a key is pressed.
-	 * Changes the visibility of the diagnostic pane if the F3 key was pressed.
-	 * 
-	 * @param e - the KeyEvent that caused this method call
-	 */
-	public void keyPressed(KeyEvent e)
-	{
-		if (e.getKeyCode() == KeyEvent.VK_F3)
-		{
-			visible = !visible;
-		}
-	}
-	
-	/**
-	 * Records the given information for one rendering loop.
-	 * 
-	 * @param draw - the amount of time to draw a single frame in ns
-	 * @param render - the amount of time to render a single frame onto the screen in ns
-	 * @param sleep - the amount of the time theoretically slept in ns
-	 */
-	public void recordRenderLoop(long draw, long render, long sleep)
-	{
-		drawTimes.add(draw);
-		renderTimes.add(render);
-		sleepTimes.add(sleep);
-	}
-	
-	/**
-	 * Records the given information for one simulation.
-	 * 
-	 * @param time - the amount of time to simulate a single generation in ns
-	 */
-	public void recordSimulation(long time)
-	{
-		simulationTimes.add(time);
-	}
-	
-	/**
-	 * Gets the value in the given list at the given distance from the end of the list.
-	 * If this index is not in the array, -1 is returned
-	 * 
-	 * @param list - the list to reference
-	 * @param shift - the distance from the end of the array
-	 * @return value - the value in the given list at list.size() - shift - 1, -1 if this is out of bounds
-	 */
-	private static long getFromTop(ArrayList<Long> list, int shift)
-	{
-		if (list.size() < shift + 1)
-		{
-			return -1;
-		}
-		
-		return list.get(list.size() - shift - 1);
-	}
-	
-	/**
-	 * Converts the given nanosecond measurement to a pixel value for display.
-	 * 
-	 * @param nanosecond - the recorded time in nanoseconds
-	 * @return pixel - the distance above the horizontal axis at which the given value should be shown
-	 */
-	private static int toPixel(long nanosecond)
-	{
-		return (int)(nanosecond/100000);
-	}
-	
-	/**
-	 * Converts the given pixel value to a nanosecond measurement.
-	 * 
-	 * @param pixel - the distance above the horizontal axis at which the given value is shown
-	 * @return nanosecond - the corresponding time in nanoseconds
-	 */
-	private static long toNanosecond(int pixel)
-	{
-		return pixel*100000;
-	}
-	
-	/**
-	 * Converts the given pixel value to a millisecond measurement.
-	 * 
-	 * @param pixel - the distance above the horizontal axis at which the given value is shown
-	 * @return millisecond - the corresponding time in milliseconds
-	 */
-	private static long toMillisecond(int pixel)
-	{
-		return toNanosecond(pixel)/1000000;
-	}
-	
-	/**
-	 * Displays diagnostic information on the screen.
-	 * A graph is shown along the bottom of the screen displaying the times various aspects of the rendering loop take in a single frame, in ms.
-	 * Above it, a box of information regarding the Grid is shown.
-	 * This box also functions as a graph axis for the simulation times, which will be displayed as red points.
-	 * Above the Grid Information is a general information box containing the location of the cursor.
-	 * Finally, a display of the heap storage is shown on the right of the screen.
-	 * 
-	 * @param g - the current Graphics object
-	 */
-	public void draw(Graphics2D g)
-	{
-		if (visible)
-		{
-			g.setFont(Information.fontTech);
-			drawRenderingGraph(g);
-			drawGridInfo(g, graphXShift, info.screen.height - 700);
-			drawGeneralInfo(g, graphXShift, 50);
-			drawMemory(g, info.screen.width - heapWidth - 75, 100);
-		}
-	}
-	
-	/**
-	 * Draws a graph of the most recent recorded values of the rendering loop.
-	 * The vertical scale is in milliseconds, and applies to all points drawn on the graph.
-	 * The red points represent the time taken to draw the contents of the screen to an image.
-	 * The yellow points represent the time taken to render this image to the screen.
-	 * The green points represent the amount of "left over" time that is used to sleep.
-	 * Sum points of all the above points are found and shown in purple.
-	 * A horizontal line of the period of the rendering loop, the theoretical time for one rendering cycle, is given in blue.
-	 * 
-	 * @param g - the current Graphics context
-	 */
-	private void drawRenderingGraph(Graphics2D g)
-	{
-		if (drawTimes.size() > 0)
-		{
-			g.setColor(purple);
-			for (int x = 0; x < Math.min(drawTimes.size(), info.screen.width - graphXShift); x++)
-			{
-				g.fillRect(x + graphXShift, info.screen.height - graphYShift - 
-						(toPixel(getFromTop(drawTimes, x)) + toPixel(getFromTop(renderTimes, x)) + toPixel(getFromTop(sleepTimes, x))), 2, 2);
-			}
-			
-			g.setColor(red);
-			for (int x = 0; x < Math.min(drawTimes.size(), info.screen.width - graphXShift); x++)
-			{
-				g.fillRect(x + graphXShift, info.screen.height - graphYShift - toPixel(getFromTop(drawTimes, x)), 2, 2);
-			}
-			
-			g.setColor(yellow);
-			for (int x = 0; x < Math.min(drawTimes.size(), info.screen.width - graphXShift); x++)
-			{
-				g.fillRect(x + graphXShift, info.screen.height - graphYShift - toPixel(getFromTop(renderTimes, x)), 2, 2);
-			}
-			
-			g.setColor(green);
-			for (int x = 0; x < Math.min(drawTimes.size(), info.screen.width - graphXShift); x++)
-			{
-				g.fillRect(x + graphXShift, info.screen.height - graphYShift - toPixel(getFromTop(sleepTimes, x)), 2, 2);
-			}
-			
-			g.setColor(blue);
-			g.drawLine(graphXShift, (int)(info.screen.height - graphYShift - toPixel(GameOfLife.period*1000000)),
-					info.screen.width, (int)(info.screen.height - graphYShift - toPixel(GameOfLife.period*1000000)));
-			g.drawLine(graphXShift, (int)(info.screen.height - graphYShift - toPixel(GameOfLife.period*1000000) + 1),
-					info.screen.width, (int)(info.screen.height - graphYShift - toPixel(GameOfLife.period*1000000)) + 1);
-			g.drawLine(graphXShift, (int)(info.screen.height - graphYShift - toPixel(GameOfLife.period*1000000) - 1),
-					info.screen.width, (int)(info.screen.height - graphYShift - toPixel(GameOfLife.period*1000000)) - 1);
-			
-			g.setColor(gray);
-			g.drawLine(graphXShift, info.screen.height - graphYShift - graphHeight, graphXShift, info.screen.height - graphYShift);
-			g.drawLine(graphXShift - 1, info.screen.height - graphYShift - graphHeight, graphXShift - 1, info.screen.height - graphYShift);
-			
-			g.drawLine(graphXShift, info.screen.height - graphYShift + 1, info.screen.width, info.screen.height - graphYShift + 1);
-			g.drawLine(graphXShift, info.screen.height - graphYShift + 2, info.screen.width, info.screen.height - graphYShift + 2);
-			
-			for (int y = 0; y <= graphHeight; y += graphVerticalDivision)
-			{
-				g.drawLine(graphXShift - graphDivisionSize, info.screen.height - graphYShift - y, graphXShift, info.screen.height - graphYShift - y);
-				g.drawString("" + toMillisecond(y), 25, info.screen.height - graphYShift - y + 5);
-			}
-			
-			drawRenderingLegend(g, graphXShift, info.screen.height - graphYShift + 15);
-		}
-	}
-	
-	/**
-	 * Draws a legend for the rendering graph at the given location.
-	 * The blue line is the period.
-	 * The red points are draw times.
-	 * The yellow points are render times.
-	 * The green points are sleep times.
-	 * The purple points are sums of drawing, rendering, and sleeping.
-	 * 
-	 * @param g - the current Graphics context
-	 * @param x - the top-left x-coordinate of the legend
-	 * @param y - the top-left y-coordinate of the legend
-	 */
-	private void drawRenderingLegend(Graphics2D g, int x, int y)
-	{
-		int progress = x;
-		
-		g.setColor(blue);
-		g.drawLine(progress, y + legendIconSize, progress + legendIconSize, y);
-		g.drawLine(progress, y + legendIconSize + 1, progress + legendIconSize + 1, y);
-		progress += legendIconSize + legendBuffer;
-		
-		g.setColor(gray);
-		g.drawString("Period", progress, y + legendIconSize);
-		progress += legendTextSize;
-		
-		g.setColor(red);
-		g.fillRect(progress, y, legendIconSize, legendIconSize);
-		progress += legendIconSize + legendBuffer;
-		
-		g.setColor(gray);
-		g.drawString("Draw", progress, y + legendIconSize);
-		progress += legendTextSize;
-		
-		g.setColor(yellow);
-		g.fillRect(progress, y, legendIconSize, legendIconSize);
-		progress += legendIconSize + legendBuffer;
-		
-		g.setColor(gray);
-		g.drawString("Render", progress, y + legendIconSize);
-		progress += legendTextSize;
-		
-		g.setColor(green);
-		g.fillRect(progress, y, legendIconSize, legendIconSize);
-		progress += legendIconSize + legendBuffer;
-		
-		g.setColor(gray);
-		g.drawString("Sleep", progress, y + legendIconSize);
-		progress += legendTextSize;
-		
-		g.setColor(purple);
-		g.fillRect(progress, y, legendIconSize, legendIconSize);
-		progress += legendIconSize + legendBuffer;
-		
-		g.setColor(gray);
-		g.drawString("Sum", progress, y + legendIconSize);
-		progress += legendTextSize;
-	}
-	
-	/**
-	 * Draws a box of information for the Grid.
-	 * Included fields are the location, zoom, dragging (true/false), creating (true/false), and last drag point.
-	 * A graph of simulation times is also drawn on top of the box.
-	 * 
-	 * @param g - the current Graphics context
-	 * @param x - the top-left x-coordinate of the box
-	 * @param y - the top-left y-coordinate of the box
-	 */
-	private void drawGridInfo(Graphics2D g, int x, int y)
-	{
-		g.setColor(gray);
-		g.drawRect(x, y, gridInfoWidth, gridInfoHeight);
-		g.drawString("Grid Information", x, y - 2);
-		g.drawString("xLoc: " + df.format(info.grid.xLoc) + " [tile] " + df.format(info.grid.toPixel(info.grid.xLoc)) + " [px]", x + 5, y + 20);
-		g.drawString("yLoc: " + df.format(info.grid.yLoc) + " [tile] " + df.format(info.grid.toPixel(info.grid.yLoc)) + " [px]", x + 5, y + 40);
-		g.drawString("Zoom: " + df.format(info.grid.zoom), x + 5, y + 60);
-		g.drawString("Dragging: " + info.grid.isDragging(), x + 5, y + 80);
-		g.drawString("Creating: " + info.grid.isCreating(), x + 5, y + 100);
-		g.drawString("Last Drag:", x + 5, y + 120);
-		g.drawString(info.grid.getLastDrag().x + " [px] " + df.format(info.grid.toTile(info.grid.getLastDrag().x)) + " [tile]", x + 20, y + 140);
-		g.drawString(info.grid.getLastDrag().y + " [px] " + df.format(info.grid.toTile(info.grid.getLastDrag().y)) + " [tile]", x + 20, y + 160);
-		
-		drawGridGraph(g, x, y);
-	}
-	
-	/**
-	 * Draws a graph of the durations of simulating generations.
-	 * These times are shown as red points and are presumed to be drawn on the Grid Information box.
-	 * 
-	 * @param g - the current Graphics context
-	 * @param x - the top-left x-coordinate of the box
-	 * @param y - the top-left y-coordinate of the box
-	 */
-	private void drawGridGraph(Graphics2D g, int x, int y)
-	{
-		g.setColor(red);
-		for (int i = 0; i < Math.min(simulationTimes.size(), gridInfoWidth); i++)
-		{
-			g.fillRect(i + x, y + gridInfoHeight - toPixel(getFromTop(simulationTimes, i)) - 5, 2, 2);
-		}
-		
-		g.setColor(gray);
-		for (int i = 0; i <= gridInfoHeight; i += graphVerticalDivision)
-		{
-			g.drawLine(x - graphDivisionSize, y + gridInfoHeight - i, x, y + gridInfoHeight - i);
-			g.drawString("" + toMillisecond(i), 25, y + gridInfoHeight - i + 5);
-		}
-	}
-	
-	/**
-	 * Draws a box of general information, containing the current location of the mouse pointer on the screen.
-	 * 
-	 * @param g - the current Graphics context
-	 * @param x - the top-left x-coordinate of the box
-	 * @param y - the top-left y-coordinate of the box
-	 */
-	private void drawGeneralInfo(Graphics2D g, int x, int y)
-	{
-		g.setColor(gray);
-		g.drawRect(x, y, generalInfoWidth, generalInfoHeight);
-		g.drawString("General Information", x, y - 2);
-		g.drawString("Mouse: ", x + 5, y + 20);
-		g.drawString(info.mouse.x + " [px] " + df.format(info.grid.getMouseTile().x) + " [tile]", x + 20, y + 40);
-		g.drawString(info.mouse.y + " [px] " + df.format(info.grid.getMouseTile().y) + " [tile]", x + 20, y + 60);
-	}
-	
-	/**
-	 * Draws a display of the state of Java heap usage.
-	 * 
-	 * @param g - the current Graphics context
-	 * @param x - the top-left x-coordinate of the box
-	 * @param y - the top-left y-coordinate of the box
-	 */
-	private void drawMemory(Graphics2D g, int x, int y)
-	{
-		long heapSize = Runtime.getRuntime().totalMemory();
-		long maxHeapSize = Runtime.getRuntime().maxMemory();
-		long heapUsed = heapSize - Runtime.getRuntime().freeMemory();
-		
-		g.setColor(green);
-		g.fillRect(x, y, heapWidth, heapHeight);
-		
-		g.setColor(yellow);
-		g.fillRect(x, y, (int)(((double)heapSize/maxHeapSize)*heapWidth), heapHeight);
-		
-		g.setColor(red);
-		g.fillRect(x, y, (int)(((double)heapUsed/maxHeapSize)*heapWidth), heapHeight);
-		
-		g.setColor(gray);
-		g.drawRect(x, y, heapWidth, heapHeight);
-		g.drawString("Heap Usage", x, y - 4f);
-		
-		g.setColor(green);
-		g.fillRect(x, y + heapHeight + 5, 20, 20);
-		g.setColor(gray);
-		g.drawString("Max. Heap: " + maxHeapSize + " [B] " + maxHeapSize/1048576 + " [MB]", x + 25, y + heapHeight + 20);
-		
-		g.setColor(yellow);
-		g.fillRect(x, y + heapHeight + 35, 20, 20);
-		g.setColor(gray);
-		g.drawString("Cur. Heap: " + heapSize + " [B] " + heapSize/1048576 + " [MB]", x + 25, y + heapHeight + 50);
-		
-		g.setColor(red);
-		g.fillRect(x, y + heapHeight + 65, 20, 20);
-		g.setColor(gray);
-		g.drawString("Mem. Used: " + heapUsed + " [B] " + heapUsed/1048576 + " [MB]", x + 25, y + heapHeight + 80);
-	}
+    private final ArrayList<Long> drawTimes;
+    private final ArrayList<Long> renderTimes;
+    private final ArrayList<Long> sleepTimes;
+    private final ArrayList<Long> totalTimes;
+    
+    private boolean visible;
+    
+    private static final Color red = new Color(215, 0, 0);
+    private static final Color yellow = new Color(237, 201, 0);
+    private static final Color green = new Color(11, 159, 0);
+    private static final Color blue = new Color(0, 64, 156);
+    private static final Color purple = new Color(108, 0, 156);
+    /**
+     * The standard border color for diagnostic information.
+     * This color should be used to draw all boxes and most text.
+     */
+    public static final Color border = new Color(130, 130, 130);
+    
+    /**
+     * The standard diagnostic number formatter.
+     * This should be used to format most numbers displayed in the diagnostics.
+     */
+    public static final DecimalFormat df = new DecimalFormat("#0.000");
+    private double frameRate;
+    
+    /**
+     * The size (horizontal and vertical dimensions in pixels) of the icons in the legend of the
+     *  drawing time graph.
+     */
+    private static final int legendIconSize = 20;
+    /**
+     * The height of the heap graph in pixels.
+     */
+    private static final int heapHeight = 30;
+    /**
+     * The largest render time shown on the rending graph in milliseconds (times beyond this are
+     *  shown above the boundaries of the graph).
+     */
+    private static final int maxRenderTime = 50;
+    private int drawLoops;
+    private int longDrawLoops;
+    
+    private long lastUpdatedFrameRate;
+    private static long heapSize = Runtime.getRuntime().totalMemory();
+    private static long maxHeapSize = Runtime.getRuntime().maxMemory();
+    private static long heapUsed = heapSize - Runtime.getRuntime().freeMemory();
+    
+    private static final Font font = new Font(Font.MONOSPACED, Font.PLAIN, 15);
+    
+    private static final Rectangle graphArea = new Rectangle(50, 450, 1200, 400);
+    private static final Rectangle gridArea = new Rectangle(50, 185, 450, 200);
+    private static final Rectangle toolbarArea = new Rectangle(550, 185, 450, 200);
+    private static final Rectangle generalArea = new Rectangle(50, 50, 250, 110);
+    private static final Rectangle memoryArea = new Rectangle(1150, 100, 350, 120);
+    
+    /**
+     * Creates a new, empty Diagnostics.
+     */
+    public Diagnostics()
+    {
+        visible = false;
+        drawTimes = new ArrayList<Long>();
+        renderTimes = new ArrayList<Long>();
+        sleepTimes = new ArrayList<Long>();
+        totalTimes = new ArrayList<Long>();
+        drawLoops = 0;
+        longDrawLoops = 0;
+        frameRate = -1;
+        lastUpdatedFrameRate = System.nanoTime();
+        
+        Listener.requestNotification(this, "switchVisibility",
+                Listener.TYPE_KEY_RELEASED, KeyEvent.VK_F3);
+    }
+    
+    /**
+     * Toggles the visibility of the diagnostic information.
+     * This method is invoked automatically when the F3 key is released.
+     */
+    public synchronized void switchVisibility()
+    {
+        visible = !visible;
+    }
+    
+    /**
+     * Records the given draw/render/sleep data from a single drawing loop.
+     * 
+     * @param draw - the time it took for the drawing phase, in nanoseconds (the time it took to
+     *  draw the Game of Life onto a buffer)
+     * @param render - the time it took for the rendering phase, in nanoseconds (the time it took
+     *  to apply the buffer onto the screen)
+     * @param sleep - the time alloted for sleeping (may not be the actual time slept)
+     */
+    public synchronized void record(long draw, long render, long sleep, long total,
+            boolean wasLong)
+    {
+        drawTimes.add(draw);
+        renderTimes.add(render);
+        sleepTimes.add(sleep);
+        totalTimes.add(total);
+        
+        drawLoops++;
+        if (wasLong)
+        {
+            longDrawLoops++;
+        }
+    }
+    
+    /**
+     * Gets the current frame rate for the Game of Life in frames per second.
+     * The frame rate is updated once every second.
+     * 
+     * @return the frame rate
+     */
+    public synchronized double getFrameRate()
+    {
+        if (System.nanoTime() - lastUpdatedFrameRate > 1000000000 || frameRate == -1)
+        {
+            frameRate = 1000000000.0/totalTimes.get(totalTimes.size() - 1);
+            lastUpdatedFrameRate = System.nanoTime();
+        }
+        return frameRate;
+    }
+    
+    /**
+     * Prints summary information regarding the execution of the program to the standard output.
+     * This should be called only when the program exits.
+     */
+    public synchronized void printExitInfo()
+    {
+        System.out.println(longDrawLoops + " [" + 100.0*longDrawLoops/drawLoops + "%] " +
+        		"of the total number of drawing loops, " + drawLoops + ", took over the period.");
+    }
+    
+    /**
+     * Draws diagnostic information with the given graphics context if the diagnostics are
+     *  currently toggled to visible.
+     * If the diagnostics are invisible, nothing will be drawn.
+     * 
+     * @param g - the graphics context
+     */
+    public synchronized void draw(Graphics2D g)
+    {
+        if (visible)
+        {
+            g.setFont(font);
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+            drawGeneralInfo(g, generalArea);
+            drawMemory(g, memoryArea);
+            GameOfLife.getGrid().drawDiagnostics(g, gridArea);
+            GameOfLife.getToolbar().drawDiagnostics(g, toolbarArea);
+            drawRenderingGraph(g, graphArea);
+        }
+    }
+    
+    /**
+     * Draws the "General Information" section in the given area.
+     * Note that if the area is too small for the information it will be clipped to the area (with
+     *  the exception of the title which is always drawn above the area).
+     * 
+     * @param g - the graphics context
+     * @param area - the area in which to draw the general information box
+     */
+    private void drawGeneralInfo(Graphics2D g, Rectangle area)
+    {
+        g.setColor(border);
+        g.drawRect(area.x, area.y, area.width, area.height);
+        g.drawString("General Information", area.x, area.y - 2);
+        
+        g.setClip(area);
+        g.drawString("Screen: " + DisplayMonitor.screen.width + "x" + DisplayMonitor.screen.height,
+                area.x + 5, area.y + 20);
+        g.drawString("Mouse: ", area.x + 5, area.y + 40);
+        g.drawString(Listener.getMouse().x + " [px]", area.x + 20, area.y + 60);
+        g.drawString(Listener.getMouse().y + " [px]", area.x + 20, area.y + 80);
+        g.drawString("Frame Rate: " + df.format(getFrameRate()) + " [fps]",
+                area.x + 5, area.y + 100);
+        g.setClip(null);
+    }
+    
+    /**
+     * Draws information pertaining to the current state of the Java Heap in the given area.
+     * Note that if the area is too small for the display it will be clipped to the area.
+     * 
+     * @param g - the graphics context
+     * @param area - the area in which to draw memory information
+     */
+    private static void drawMemory(Graphics2D g, Rectangle area)
+    {
+        g.setClip(area);
+        heapSize = Runtime.getRuntime().totalMemory();
+        maxHeapSize = Runtime.getRuntime().maxMemory();
+        heapUsed = heapSize - Runtime.getRuntime().freeMemory();
+        
+        g.setColor(green);
+        g.fillRect(area.x, area.y, area.width, heapHeight);
+        g.fillRect(area.x + 2, area.y + 2 + heapHeight + 5, 16, 16);
+        
+        g.setColor(yellow);
+        g.fillRect(area.x, area.y, (int) ((double) heapSize/maxHeapSize*area.width), heapHeight);
+        g.fillRect(area.x + 2, area.y + 2 + heapHeight + 35, 16, 16);
+        
+        g.setColor(red);
+        g.fillRect(area.x, area.y, (int) ((double) heapUsed/maxHeapSize*area.width), heapHeight);
+        g.fillRect(area.x + 2, area.y + 2 + heapHeight + 65, 16, 16);
+        
+        g.setColor(border);
+        g.drawRect(area.x, area.y, area.width, heapHeight);
+        g.drawString("JVM RAM Usage", area.x, area.y - 4);
+        
+        g.drawString("Max. Heap: " + maxHeapSize/1048576 + " [MB] " + maxHeapSize + " [B]",
+                area.x + 25, area.y
+                + heapHeight + 20);
+        g.drawString("Cur. Heap: " + heapSize/1048576 + " [MB] " + heapSize + " [B]",
+                area.x + 25, area.y
+                + heapHeight + 50);
+        g.drawString("Mem. Used: " + heapUsed/1048576 + " [MB] " + heapUsed + " [B]",
+                area.x + 25, area.y
+                + heapHeight + 80);
+        g.setClip(null);
+    }
+    
+    /**
+     * Draws a graph of the recorded rendering times in the given area.
+     * Note that the graph will exceed the area to the left and below, but never to the right.
+     * In extraordinary circumstances (when the drawing/rendering times are above the period
+     *  allotted for them) some parts of the graph will be plotted above the area and not clipped.
+     * 
+     * @param g - the graphics context
+     * @param area - the area in which to draw the graph
+     */
+    private void drawRenderingGraph(Graphics2D g, Rectangle area)
+    {
+        while (drawTimes.size() > area.width - 1)
+        {
+            drawTimes.remove(0);
+            renderTimes.remove(0);
+            sleepTimes.remove(0);
+            totalTimes.remove(0);
+        }
+        
+        g.setColor(purple);
+        for (int i = 0; i < totalTimes.size(); i++)
+        {
+            g.drawRect(area.x + totalTimes.size() - i, (int) (area.y + area.height - 
+                            area.height*totalTimes.get(i)/(1000000*maxRenderTime)),
+                    1, 1);
+        }
+        
+        g.setColor(yellow);
+        for (int i = 0; i < renderTimes.size(); i++)
+        {
+            g.drawRect(area.x + renderTimes.size() - i, (int) (area.y + area.height - 
+                            area.height*renderTimes.get(i)/(1000000*maxRenderTime)),
+                    1, 1);
+        }
+        
+        g.setColor(green);
+        for (int i = 0; i < sleepTimes.size(); i++)
+        {
+            g.drawRect(area.x + sleepTimes.size() - i, (int) (area.y + area.height - 
+                            area.height*sleepTimes.get(i)/(1000000*maxRenderTime)),
+                    1, 1);
+        }
+        
+        g.setColor(red);
+        for (int i = 0; i < drawTimes.size(); i++)
+        {
+            g.drawRect(area.x + drawTimes.size() - i, (int) (area.y + area.height - 
+                    area.height*drawTimes.get(i)/(1000000*maxRenderTime)),
+                    1, 1);
+        }
+        
+        g.setColor(blue);
+        g.setStroke(new BasicStroke(2.5f));
+        g.drawLine(area.x,
+                (int) (area.y + area.height - area.height*GameOfLife.period/maxRenderTime),
+                area.x + area.width,
+                (int) (area.y + area.height - area.height*GameOfLife.period/maxRenderTime));
+        
+        g.setColor(border);
+        g.setStroke(new BasicStroke(1.5f));
+        g.drawLine(area.x, area.y, area.x, area.y + area.height);
+        g.drawLine(area.x, area.y + area.height, area.x + area.width, area.y + area.height);
+        
+        for (int y = 0; y <= maxRenderTime; y += 5)
+        {
+            g.drawLine(area.x - 7, area.y + area.height - area.height*y/maxRenderTime,
+                    area.x, area.y + area.height - area.height*y/maxRenderTime);
+            g.drawString(String.valueOf(y),
+                    area.x - 35, area.y + area.height - area.height*y/maxRenderTime + 5);
+        }
+        
+        int x = area.x;
+        int y = area.y + area.height + 10;
+        
+        g.setColor(blue);
+        g.setStroke(new BasicStroke(2.5f));
+        g.drawLine(x, y + legendIconSize, x + legendIconSize, y);
+        x += legendIconSize + 10;
+        
+        g.setColor(border);
+        g.drawString("Period", x, y + legendIconSize);
+        x += 105;
+        
+        g.setColor(red);
+        g.fillRect(x, y, legendIconSize, legendIconSize);
+        x += legendIconSize + 10;
+        
+        g.setColor(border);
+        g.drawString("Draw", x, y + legendIconSize);
+        x += 105;
+        
+        g.setColor(yellow);
+        g.fillRect(x, y, legendIconSize, legendIconSize);
+        x += legendIconSize + 10;
+        
+        g.setColor(border);
+        g.drawString("Render", x, y + legendIconSize);
+        x += 105;
+        
+        g.setColor(green);
+        g.fillRect(x, y, legendIconSize, legendIconSize);
+        x += legendIconSize + 10;
+        
+        g.setColor(border);
+        g.drawString("Sleep", x, y + legendIconSize);
+        x += 105;
+        
+        g.setColor(purple);
+        g.fillRect(x, y, legendIconSize, legendIconSize);
+        x += legendIconSize + 10;
+        
+        g.setColor(border);
+        g.drawString("Sum", x, y + legendIconSize);
+    }
 }

@@ -1,564 +1,796 @@
 package grid;
 
+import graphics.AcceleratedImage;
+import graphics.DisplayMonitor;
+import image.ImageLoader;
 import io.Listener;
 
-import java.awt.AWTException;
+import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.Robot;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-import main.Information;
+import pattern.Pattern;
+
+import main.Diagnostics;
+import main.GameOfLife;
 
 /**
- * Represents the visible grid on the screen.
- * This class is responsible for the location and zoom of the viewing area on the screen.
- * Also contained within the class is the primary Map object which holds information regarding the living cells in the grid.
- * The grid handles mouse presses and drags for the Map, using them as triggers to create or destroy cells in the map.
+ * Handles the interface between the user and a Map object.
+ * The Grid is drawn as the background of the full-screen window and it handles all access to the
+ *  Map, including:
+ * <ul>
+ * <li>Creation and destruction of cells with the mouse</li>
+ * <li>Zooming and movement of the Grid</li>
+ * <li>Rendering the Grid at the current position and zoom</li>
+ * </ul>
  * 
- * @author Dominic
+ * @author zirbinator
  */
 public class Grid implements Runnable
 {
-	private BufferedImage aliveImage;
-	
-	private boolean dragging = false;						// true if and only if the left mouse button is pressed when the mouse is being dragged
-	private boolean creating = true;						// true if tiles are being made alive when the mouse is dragged, false otherwise
-	private boolean up = false;								// true if the up key is currently held
-	private boolean down = false;							// true if the down key is currently held
-	private boolean right = false;							// true if the right key is currently held
-	private boolean left = false;							// true if the left key is currently held
-	private boolean shift = false;							// true if the shift key is currently held
-	private boolean plus = false;							// true if the plus key is currently held
-	private boolean minus = false;							// true if the minus key is currently held
-	
-	private static Color green = new Color(0, 215, 10);		// the green color used for alive tiles when zoomed out enough
-	private static Color gray = new Color(50, 50, 50);		// the gray color used for the divider bars between tiles
-	
-	public double xLoc;										// the viewing distance from the origin of 0,0 in tiles
-	public double yLoc;										// the viewing distance from the origin of 0,0 in tiles
-	public static final double MOVE_SPEED = 0.6;			// the speed at which movement occurs in px/ms [movement in 1 ms = MOVE_SPEED/zoom]
-	public double zoom;										// the size of a single tile on the screen
-	public static final double MAX_ZOOM = 75;				// maximum zoom - the largest allowable tile size
-	public static final double MIN_ZOOM = 1;				// minimum zoom - the smallest allowable tile size
-	public static final double GRID_ZOOM = 5;				// minimum zoom for the grid lines to appear at all on the screen
-	public static final double FADE_START = 25;				// the largest zoom for which grid fading begins.
-	public static final double ZOOM_SPEED_KEY = 0.003;		// the speed of zooming per millisecond for which an appropriate key is held in px/ms 
-															// [zoom in 1 ms = ZOOM_SPEED_KEY*zoom]
-	public static final double ZOOM_SPEED_MOUSE = 0.1;		// the speed of zooming per mouse wheel scroll, adjusted by zoom
-	
-	private Information info;
-	
-	public static long period = 10;
-	private long lastUpdate = 0;
-	
-	public Map map;
-	
-	private Point lastDrag = new Point();
-	
-	private Robot bot;
-	
-	public Thread mapThread;
-	
-	/**
-	 * Creates a new Grid object with the given Information.
-	 * Member fields such as the Map and locations are initialized and
-	 *  requests are made to the listener for method calls upon certain events.
-	 * 
-	 * @param info - the current Information
-	 */
-	public Grid(Information info)
-	{
-		this.info = info;
-		map = new Map(info);
-		aliveImage = info.imageLoader.get("alive").getBufferedImage();
-		info.listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON1);
-		info.listener.requestNotification(this, "mouseReleased", Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
-		info.listener.requestNotification(this, "mouseDragged", Listener.TYPE_MOUSE_DRAGGED, Listener.CODE_BUTTON1);
-		info.listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
-		info.listener.requestNotification(this, "keyReleased", Listener.TYPE_KEY_RELEASED, Listener.CODE_KEY_ALL);
-		info.listener.requestNotification(this, "mouseWheel", Listener.TYPE_MOUSE_WHEEL, Listener.CODE_SCROLL_BOTH);
-		zoom = 20;
-		xLoc = 0;
-		yLoc = 0;
-		
-		try
-		{
-			bot = new Robot();
-		}
-		catch (AWTException ex)
-		{
-			ex.printStackTrace();
-			bot = null;
-		}
-		
-		mapThread = new Thread(map);
-		mapThread.start();
-	}
-	
-	/**
-	 * Runs the Grid in its own Thread.
-	 * The update method is continuously called, sleeping by the preset period in between.
-	 */
-	public void run()
-	{
-		lastUpdate = System.nanoTime();
-		while (true)
-		{
-			update();
-			try
-			{
-				Thread.sleep(period);
-			}
-			catch (InterruptedException ex) { }
-		}
-	}
-	
-	/**
-	 * Updates the Grid by adjusting the location and zoom based on the state of keys.
-	 * The arrow keys are used to move the viewing area on the screen and the minus and plus (or equals) keys are used to zoom.
-	 * Alternatively, if the shift key is held, the up and down arrows are used to zoom.
-	 * Because the location of the viewing area is stored in cells rather than pixels,
-	 *  the change in location equals the time elapsed since the last update times the movement speed,
-	 *  converted to a tile value from a pixel value.
-	 * Similarly, the zooming is shifted by zoom so that zooming does not appear to 'slow down' as the user zooms in.
-	 * This effect would occur because, while the zoom amount is changing by the same amount,
-	 *  the cells appear to be getting larger at a smaller rate when they are already large.
-	 * Thus, the zoom amount equals the amount to zoom per millisecond times the time since the last update, then multiplied by the zoom value.
-	 * This will effectively make zooming look smoother because zooming speeds up as zoom gets larger.
-	 */
-	public void update()
-	{
-		long time = (System.nanoTime() - lastUpdate)/1000000;			// time since the last update in milliseconds
-		if (shift)
-		{
-			if (up && !down)
-			{
-				// zoom in = tiles become bigger -> zoom becomes larger
-				zoom(ZOOM_SPEED_KEY*time*zoom);
-			}
-			else if (down && !up)
-			{
-				// zoom out = tiles become smaller -> zoom becomes smaller
-				zoom(-ZOOM_SPEED_KEY*time*zoom);
-			}
-		}
-		else
-		{
-			if (up && !down)
-			{
-				yLoc -= toTile(MOVE_SPEED*time);
-			}
-			else if (down && !up)
-			{
-				yLoc += toTile(MOVE_SPEED*time);
-			}
-			if (right && !left)
-			{
-				xLoc += toTile(MOVE_SPEED*time);
-			}
-			else if (left && !right)
-			{
-				xLoc -= toTile(MOVE_SPEED*time);
-			}
-			if (plus && !minus)
-			{
-				// zoom in = tiles become bigger -> zoom becomes larger
-				zoom(ZOOM_SPEED_KEY*time*zoom);
-			}
-			else if (minus && !plus)
-			{
-				// zoom out = tiles become smaller -> zoom becomes smaller
-				zoom(-ZOOM_SPEED_KEY*time*zoom);
-			}
-		}
-		lastUpdate = System.nanoTime();
-	}
-	
-	/**
-	 * Zooms by the given amount.
-	 * The zoom value, equal to the size of the cells on the screen,
-	 *  is adjusted by the given amount, which means that zooming will appear slower when zoomed in.
-	 * The zoom is kept between the minimum and maximum zoom amounts.
-	 * Finally, the x- and y-locations are adjusted so that the grid zooms in around the cursor location.
-	 * That is, if the cursor is over a certain tile before zooming, its location over that tile will be maintained.
-	 * 
-	 * @param amount - the amount by which to adjust the zoom value
-	 */
-	public synchronized void zoom(double amount)
-	{
-		double prevZoom = zoom;
-		zoom += amount;
-		
-		if (zoom > MAX_ZOOM)
-		{
-			zoom = MAX_ZOOM;
-		}
-		else if (zoom < MIN_ZOOM)
-		{
-			zoom = MIN_ZOOM;
-		}
-		
-		xLoc -= ((info.screen.width - (zoom/prevZoom)*info.screen.width)/zoom) * info.mouse.x/info.screen.width;
-		yLoc -= ((info.screen.height - (zoom/prevZoom)*info.screen.height)/zoom) * info.mouse.y/info.screen.height;
-	}
-	
-	/**
-	 * Called when any mouse button is pressed.
-	 * First, the event is checked to make sure that it originated from a left mouse click. 
-	 * First, the event is checked to see if any overlying layers would process it (i.e. the control bar, toolbar, and selector).
-	 * If shift is not being held, the cell clicked on is switched (alive if dead, dead if alive).
-	 * 
-	 * @param e - the MouseEvent triggering this call
-	 */
-	public void mousePressed(MouseEvent e)
-	{
-		if (!info.controlBar.consumed(e) && !info.toolbar.consumed(e) && !info.toolbar.selector.consumed(e) && !info.gui.consumed(e))
-		{
-			if (!shift)
-			{
-				Point mouseTile = getMouseTile();
-				if (map.get(mouseTile.x, mouseTile.y))
-				{
-					// tile is alive
-					map.set(false, mouseTile.x, mouseTile.y);
-					creating = false;
-				}
-				else
-				{
-					// tile is dead
-					map.set(true, mouseTile.x, mouseTile.y);
-					creating = true;
-				}
-			}
-			dragging = true;
-		}
-		
-		lastDrag = e.getLocationOnScreen();
-	}
-	
-	public void mouseReleased(MouseEvent e)
-	{
-		dragging = false;
-	}
-	
-	/**
-	 * Called when the mouse is held and dragged.
-	 * The event is checked to see if it is not consumed by another object
-	 *  and the left mouse button is being dragged (confirmed with the dragging flag set only if the left mouse button is currently held).
-	 * If this is the case and shift is not being held, cells that have been dragged over by the mouse are created or destroyed.
-	 * If shift is held, the mouse is used to drag the viewing area around and the x- and y-locations are adjusted accordingly.
-	 * 
-	 * @param e - the MouseEvent that triggered this method call
-	 */
-	public void mouseDragged(MouseEvent e)
-	{
-		if (!info.controlBar.consumed(e) && !info.toolbar.consumed(e) && !info.toolbar.selector.consumed(e) && !info.gui.consumed(e))
-		{
-			if (dragging)
-			{
-				if (!shift)
-				{
-					Point mouseTile = getMouseTile();
-					map.set(creating, mouseTile.x, mouseTile.y);
-				}
-				else
-				{
-					xLoc += toTile(lastDrag.x - e.getLocationOnScreen().x);
-					yLoc += toTile(lastDrag.y - e.getLocationOnScreen().y);
-				}
-			}
-		}
-		lastDrag = e.getLocationOnScreen();
-	}
-	
-	/**
-	 * Called when a key is pressed.
-	 * If the control key is not held, the appropriate key flag is set to true.
-	 * If control is held, the Robot is used to move the mouse and create a cell in the direction given by the key event.
-	 * This feature gives the user the ability to easily draw straight lines and count distances.
-	 * 
-	 * @param e - the KeyEvent that triggered this method call
-	 */
-	public void keyPressed(KeyEvent e)
-	{
-		if (!e.isControlDown())
-		{
-			if (e.getKeyCode() == KeyEvent.VK_UP)
-			{
-				up = true;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_DOWN)
-			{
-				down = true;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_RIGHT)
-			{
-				right = true;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_LEFT)
-			{
-				left = true;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_SHIFT)
-			{
-				shift = true;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS)
-			{
-				plus = true;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_MINUS)
-			{
-				minus = true;
-			}
-		}
-		else
-		{
-			if (bot != null)
-			{
-				if (e.getKeyCode() == KeyEvent.VK_UP)
-				{
-					bot.mouseMove(info.mouse.x, (int)(info.mouse.y - zoom));
-					Point mouseTile = getMouseTile();
-					mouseTile.y--;
-					map.set(true, mouseTile.x, mouseTile.y);
-				}
-				else if (e.getKeyCode() == KeyEvent.VK_DOWN)
-				{
-					bot.mouseMove(info.mouse.x, (int)(info.mouse.y + zoom));
-					Point mouseTile = getMouseTile();
-					mouseTile.y++;
-					map.set(true, mouseTile.x, mouseTile.y);
-				}
-				else if (e.getKeyCode() == KeyEvent.VK_RIGHT)
-				{
-					bot.mouseMove((int)(info.mouse.x + zoom), info.mouse.y);
-					Point mouseTile = getMouseTile();
-					mouseTile.x++;
-					map.set(true, mouseTile.x, mouseTile.y);
-				}
-				else if (e.getKeyCode() == KeyEvent.VK_LEFT)
-				{
-					bot.mouseMove((int)(info.mouse.x - zoom), info.mouse.y);
-					Point mouseTile = getMouseTile();
-					mouseTile.x--;
-					map.set(true, mouseTile.x, mouseTile.y);
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Called when a key is released.
-	 * This method releases the appropriate trigger, provided that the control key is not held down.
-	 * 
-	 * @param e - the KeyEvent that triggered this method call
-	 */
-	public void keyReleased(KeyEvent e)
-	{
-		if (!e.isControlDown())
-		{
-			if (e.getKeyCode() == KeyEvent.VK_UP)
-			{
-				up = false;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_DOWN)
-			{
-				down = false;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_RIGHT)
-			{
-				right = false;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_LEFT)
-			{
-				left = false;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_SHIFT)
-			{
-				shift = false;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS)
-			{
-				plus = false;
-			}
-			else if (e.getKeyCode() == KeyEvent.VK_MINUS)
-			{
-				minus = false;
-			}
-		}
-	}
-	
-	/**
-	 * Called when the mouse wheel is rotated.
-	 * This method uses the direction and amount of the the given event to determine the amount to zoom.
-	 * Additionally, the zoom is used to scale the zoom amount so that zooming appears to be even throughout its range.
-	 * 
-	 * @param e - the MouseWheelEvent that triggered this method call
-	 */
-	public void mouseWheel(MouseWheelEvent e)
-	{
-		zoom(-ZOOM_SPEED_MOUSE*zoom*e.getWheelRotation());
-	}
-	
-	/**
-	 * Returns true if and only if the left mouse button is currently held over the grid.
-	 * 
-	 * @return dragging - true if the mouse is being dragged, false otherwise
-	 */
-	public boolean isDragging()
-	{
-		return dragging;
-	}
-	
-	/**
-	 * Returns true if and only if the mouse is currently "creating" living cells.
-	 * 
-	 * @return creating - true if the mouse is currently used to create cells, false otherwise
-	 */
-	public boolean isCreating()
-	{
-		return creating;
-	}
-	
-	/**
-	 * Returns the Point at which the left mouse button was last clicked or dragged, in pixels.
-	 * 
-	 * @return lastDrag - the on-screen coordinates of the mouse's last press or drag
-	 */
-	public Point getLastDrag()
-	{
-		return lastDrag;
-	}
-	
-	/**
-	 * Converts the given value in the pixel coordinate system to the correct coordinate in the corresponding tile system.
-	 * This method simply divides the given pixel value by the zoom to find the tile value.
-	 * 
-	 * @param pixel - the distance measured in pixels
-	 * @return tile - the distance measured in tiles
-	 */
-	public double toTile(double pixel)
-	{
-		return pixel/zoom;
-	}
-	
-	/**
-	 * Converts the given value in the pixel coordinate system to the correct coordinate in the corresponding pixel system.
-	 * This method simply multiplies the given tile value by the zoom to find the correct pixel value.
-	 * 
-	 * @param tile - the distance measured in tiles
-	 * @return pixel - the distance measured in pixels
-	 */
-	public double toPixel(double tile)
-	{
-		return tile*zoom;
-	}
-	
-	/**
-	 * Gets the tile that the mouse is currently hovering over.
-	 * 
-	 * @return mouseTile - the tile coordinates of the mouse
-	 */
-	public Point getMouseTile()
-	{
-		return new Point(roundToward0(info.mouse.x/zoom + xLoc), roundToward0(info.mouse.y/zoom + yLoc));
-	}
-	
-	/**
-	 * Rounds the given double toward 0.
-	 * If the double is greater than 0, it is casted to an integer and returned.
-	 * If the double is less than 0, it is casted to an integer, decremented, and returned.
-	 * Otherwise, 0 is returned.
-	 * 
-	 * @param a - the double to be rounded toward 0
-	 * @return rounded - a rounded integer value whose absolute value is the greatest integer less than or equal to the absolute value of a
-	 */
-	private static int roundToward0(double a)
-	{
-		if (a > 0)
-		{
-			return (int)a;
-		}
-		else if (a < 0)
-		{
-			return (int)a - 1;
-		}
-		else
-		{
-			return 0;
-		}
-	}
-	
-	/**
-	 * Returns the "decimal" part of the given double. That is, the value returned is in the interval [0,1] such that (int)d + getDecimal(d) = d.
-	 * 
-	 * @param d - the double of which the decimal is to be returned
-	 * @return decimal - the decimal portion of the given value
-	 */
-	private static double getDecimal(double d)
-	{
-		return d - Math.floor(d);
-	}
-	
-	public synchronized void draw(Graphics2D g)
-	{
-		g.setColor(Color.black);
-		g.fillRect(0, 0, info.screen.width, info.screen.height);
-		ArrayList<Point> alive = map.getLiving();
-		if (zoom <= 15)
-		{
-			g.setColor(green);
-			for (int i = 0; i < alive.size(); i++)
-			{
-				if (alive.get(i).x >= xLoc - 1 && alive.get(i).y >= yLoc - 1
-						&& alive.get(i).x < xLoc + toTile(info.screen.width) && alive.get(i).y < yLoc + toTile(info.screen.height))
-				{
-					boolean xShift = alive.get(i).x - xLoc > 0;
-					boolean yShift = alive.get(i).y - xLoc > 0;
-					g.fillRect((int)toPixel(alive.get(i).x - xLoc) + (xShift ? 1 : 0),
-							(int)toPixel(alive.get(i).y - yLoc) + (yShift ? 1 : 0), (int)zoom, (int)zoom);
-				}
-			}
-		}
-		else
-		{
-			for (int i = 0; i < alive.size(); i++)
-			{
-				if (alive.get(i).x >= xLoc - 1 && alive.get(i).y >= yLoc - 1
-						&& alive.get(i).x < xLoc + toTile(info.screen.width) && alive.get(i).y < yLoc + toTile(info.screen.height))
-				{
-					boolean xShift = alive.get(i).x - xLoc > 0;
-					boolean yShift = alive.get(i).y - xLoc > 0;
-					g.drawImage(aliveImage, (int)toPixel(alive.get(i).x - xLoc) + (xShift ? 1 : 0),
-							(int)toPixel(alive.get(i).y - yLoc) + (yShift ? 1 : 0), (int)zoom, (int)zoom, null);
-				}
-			}
-		}
-		if (zoom > GRID_ZOOM)
-		{
-			if (zoom < FADE_START)
-			{
-				g.setColor(new Color(gray.getRed(), gray.getGreen(), gray.getBlue(), (int)(255*(zoom/FADE_START))));
-			}
-			else
-			{
-				g.setColor(gray);
-			}
-			for (double x = -getDecimal(xLoc); x < info.screen.width/zoom + 1; x++)
-			{
-				g.drawLine((int)toPixel(x), 0, (int)toPixel(x), info.screen.height);
-			}
-			for (double y = -getDecimal(yLoc); y < info.screen.height/zoom + 1; y++)
-			{
-				g.drawLine(0, (int)toPixel(y), info.screen.width, (int)toPixel(y));
-			}
-		}
-	}
+    private AcceleratedImage aliveImage;
+    private ArrayList<Long> simulationTimes;
+    
+    /**
+     * Whether the user is currently dragging to either create or destroy cells.
+     */
+    private boolean dragging;
+    /**
+     * Whether the user is currently creating cells with the mouse drag.
+     * Note: this can be true even after the user has released the mouse.
+     */
+    private boolean creating;
+    private boolean upHeld;
+    private boolean downHeld;
+    private boolean rightHeld;
+    private boolean leftHeld;
+    private boolean plusHeld;
+    private boolean minusHeld;
+    private boolean[][] clipboard;
+    
+    private static final Color backgroundColor = Color.black;
+    /**
+     * The color used for living cells when zoomed out, typically green.
+     */
+    public static final Color aliveColor = new Color(0, 215, 10);
+    /**
+     * The color of the dividers between the cells, typically gray.
+     */
+    private static final Color dividerColor = new Color(50, 50, 50);
+    private static final Color simulationTimesColor = Color.red;
+    
+    /**
+     * The far left coordinate of the screen's view of the grid, in cell coordinates.
+     */
+    protected double x;
+    /**
+     * The top coordinate of the screen's view of the grid, in cell coordinates.
+     */
+    protected double y;
+    /**
+     * The current zoom: the size (width and height) of a single cell in pixels.
+     */
+    double zoom;
+    /**
+     * The speed of movement from the arrow keys in pixels/millisecond: the amount moved (in
+     *  pixels) in 1 millisecond is {@code MOVE_SPEED/zoom}.
+     */
+    private static final double MOVE_SPEED = 0.6;
+    /**
+     * The maximum ("closest") zoom: the maximum size (width and height) of a single cell in
+     *  pixels.
+     */
+    private static final double MAX_ZOOM = 70;
+    /**
+     * The minimum ("farthest") zoom: the minimum size (width and height) of a single cell in
+     *  pixels.
+     */
+    private static final double MIN_ZOOM = 1;
+    /**
+     * The minimum zoom (width and height of cells in pixels) for which grid lines appear at all.
+     */
+    private static final double GRID_ZOOM = 5;
+    /**
+     * The largest zoom (width and height of cells in pixels) for which the grid lines begin to
+     *  fade.
+     */
+    private static final double FADE_START = 25;
+    /**
+     * The speed of zooming from the plus/minus keys in pixels/millisecond: the change (in the zoom
+     *  in pixels) in 1 millisecond is {@code ZOOM_SPEED_KEY*zoom} while plus/minus are held.
+     */
+    private static final double ZOOM_SPEED_KEY = 0.003;
+    /**
+     * The speed of zooming from the mouse wheel: the change (in the zoom in pixels) from a single
+     *  mouse wheel "tick" is {@code ZOOM_SPEED_MOUSE*zoom}.
+     */
+    private static final double ZOOM_SPEED_MOUSE = 0.1;
+    
+    private static final long period = 10;
+    /**
+     * The maximum simulation time labeled in the diagnostic view.
+     * Simulation times above this are shown outside (above) the diagnostic view.
+     */
+    private static final long maxSimulationTime = 50;
+    
+    private Map map;
+    
+    private Pattern selectedPattern;
+    private Point lastDrag;
+    
+    private Selection selection;
+    
+    /**
+     * Creates a new, empty Grid.
+     * The Grid's position is initialize to a standard zoom and the top-left of the screen to be
+     *  the origin.
+     * The Grid's Map is also created, and empty.
+     */
+    public Grid()
+    {
+        x = 0;
+        y = 0;
+        zoom = 20;
+        upHeld = false;
+        downHeld = false;
+        rightHeld = false;
+        leftHeld = false;
+        
+        dragging = false;
+        creating = false;
+        lastDrag = new Point();
+        simulationTimes = new ArrayList<Long>();
+        selection = new Selection(this);
+        selectedPattern = null;
+        
+        map = new Map();
+        clipboard = null;
+        
+        aliveImage = ImageLoader.load("alive", AcceleratedImage.OPAQUE);
+        
+        Listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED);
+        Listener.requestNotification(this, "keyReleased", Listener.TYPE_KEY_RELEASED);
+        Listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED);
+        Listener.requestNotification(this, "mouseReleased",
+                Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
+        Listener.requestNotification(this, "mouseDragged",
+                Listener.TYPE_MOUSE_DRAGGED, Listener.CODE_BUTTON1);
+        Listener.requestNotification(this, "mouseWheel",
+                Listener.TYPE_MOUSE_WHEEL, Listener.CODE_SCROLL_BOTH);
+        
+        new Thread(this).start();
+    }
+    
+    /**
+     * Runs the Grid's position and zoom changes in a separate Thread.
+     * That is, the position and zoom of the Grid are constantly updated based on the states of
+     *  relevant keys such as the arrow and plus/minus keys.
+     * 
+     * @see Runnable#run()
+     */
+    public void run()
+    {
+        long lastUpdate = System.nanoTime();
+        while (true)
+        {
+            long elapsed = (System.nanoTime() - lastUpdate)/1000000;
+            if (upHeld && !downHeld)
+            {
+                y -= toCell(MOVE_SPEED*elapsed);
+            }
+            else if (downHeld && !upHeld)
+            {
+                y += toCell(MOVE_SPEED*elapsed);
+            }
+            if (rightHeld && !leftHeld)
+            {
+                x += toCell(MOVE_SPEED*elapsed);
+            }
+            else if (leftHeld && !rightHeld)
+            {
+                x -= toCell(MOVE_SPEED*elapsed);
+            }
+            if (plusHeld && !minusHeld)
+            {
+                zoom(ZOOM_SPEED_KEY*elapsed*zoom);
+            }
+            else if (minusHeld && !plusHeld)
+            {
+                zoom(-ZOOM_SPEED_KEY*elapsed*zoom);
+            }
+            
+            lastUpdate = System.nanoTime();
+            try
+            {
+                Thread.sleep(period);
+            }
+            catch (InterruptedException ex)
+            {
+                ex.printStackTrace();
+            }
+        }
+    }
+    
+    /**
+     * Gets the current generation of the Grid's Map.
+     * The generation is a counter which is incremented every time the Grid is updated and reset
+     *  (to 0) whenever the Grid is cleared.
+     * 
+     * @return the current generation of the Map
+     */
+    public int getGeneration()
+    {
+        return map.getGeneration();
+    }
+    
+    /**
+     * Sets the pattern currently "held" by the user.
+     * This pattern is shown on the screen as if it is dragged by the mouse, and is placed onto the
+     *  grid when the user clicks the mouse (or removed when the user right-clicks).
+     * 
+     * @param pattern - the currently selected pattern, or null for no pattern
+     */
+    public void setSelectedPattern(Pattern pattern)
+    {
+        selectedPattern = pattern;
+    }
+    
+    /**
+     * Updates the Grid's Map, which simulates the next generation and replaces the Map's contents
+     *  with the next generation.
+     * 
+     * @see Map#update()
+     */
+    public void update()
+    {
+        long before = System.nanoTime();
+        map.update();
+        simulationTimes.add((System.nanoTime() - before)/1000000);
+    }
+    
+    /**
+     * Clears the Grid's Map, which removes all living cells from the Map and resets the generation
+     *  counter.
+     * 
+     * @see Map#clear()
+     */
+    public void clear()
+    {
+        map.clear();
+        simulationTimes.clear();
+    }
+    
+    /**
+     * Clears the given area.
+     * 
+     * @param area - the area of the grid to clear, in cell coordinates
+     * @see Map#clear(Rectangle)
+     */
+    public void clear(Rectangle area)
+    {
+        map.clear(area);
+    }
+    
+    /**
+     * Copies the given area onto the Grid's clipboard.
+     * 
+     * @param area - the area of the grid to copy, in cell coordinates
+     */
+    public void copy(Rectangle area)
+    {
+        clipboard = new boolean[area.width][area.height];
+        for (int x = 0; x < area.width; x++)
+        {
+            for (int y = 0; y < area.height; y++)
+            {
+                clipboard[x][y] = map.isAlive(area.x + x, area.y + y);
+            }
+        }
+    }
+    
+    /**
+     * Creates a rectangular border around the interior of the given area.
+     * 
+     * @param area - the area of the grid to "square", in cell coordinates
+     * @see Map#square(Rectangle)
+     */
+    public void square(Rectangle area)
+    {
+        map.square(area);
+    }
+    
+    /**
+     * Creates an ellipse contained in the given area.
+     * 
+     * @param area - the area of the grid in which to create an oval, in cell coordinates
+     * @see Map#oval(Rectangle)
+     */
+    public void oval(Rectangle area)
+    {
+        map.oval(area);
+    }
+    
+    /**
+     * Rotates the given area of the Grid clockwise 90 degrees.
+     * 
+     * @param area - the area of the grid to rotate, in cell coordinates
+     * @return the transformed area
+     * @see Map#rotateCW(Rectangle)
+     */
+    public Rectangle rotateCW(Rectangle area)
+    {
+        return map.rotateCW(area);
+    }
+    
+    /**
+     * Rotates the given area of the Grid counterclockwise 90 degrees.
+     * 
+     * @param area - the area of the grid to rotate, in cell coordinates
+     * @return the transformed area
+     * @see Map#rotateCCW(Rectangle)
+     */
+    public Rectangle rotateCCW(Rectangle area)
+    {
+        return map.rotateCCW(area);
+    }
+    
+    /**
+     * Pastes the current contents of the clipboard at the current location of the mouse.
+     */
+    private void pasteClipboard()
+    {
+        if (clipboard != null)
+        {
+            Cell mouse = getMouseCell();
+            for (int x = 0; x < clipboard.length; x++)
+            {
+                for (int y = 0; y < clipboard[x].length; y++)
+                {
+                    map.setAlive(mouse.x + x, mouse.y + y, clipboard[x][y]);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Invoked when a key is pressed.
+     * The states of movement and zooming keys are updated.
+     * 
+     * @param e - the triggering event
+     */
+    public void keyPressed(KeyEvent e)
+    {
+        switch (e.getKeyCode())
+        {
+        case KeyEvent.VK_RIGHT:
+            rightHeld = true;
+            break;
+        case KeyEvent.VK_LEFT:
+            leftHeld = true;
+            break;
+        case KeyEvent.VK_UP:
+            upHeld = true;
+            break;
+        case KeyEvent.VK_DOWN:
+            downHeld = true;
+            break;
+        case KeyEvent.VK_PLUS:
+        case KeyEvent.VK_EQUALS:
+            plusHeld = true;
+            break;
+        case KeyEvent.VK_MINUS:
+            minusHeld = true;
+            break;
+        }
+    }
+    
+    /**
+     * Invoked when a key is released.
+     * The states of movement and zooming keys are updated and "V" with the control key held pastes
+     *  the current clipboard.
+     * 
+     * @param e - the triggering event
+     */
+    public void keyReleased(KeyEvent e)
+    {
+        switch (e.getKeyCode())
+        {
+        case KeyEvent.VK_RIGHT:
+            rightHeld = false;
+            break;
+        case KeyEvent.VK_LEFT:
+            leftHeld = false;
+            break;
+        case KeyEvent.VK_UP:
+            upHeld = false;
+            break;
+        case KeyEvent.VK_DOWN:
+            downHeld = false;
+            break;
+        case KeyEvent.VK_PLUS:
+        case KeyEvent.VK_EQUALS:
+            plusHeld = false;
+            break;
+        case KeyEvent.VK_MINUS:
+            minusHeld = false;
+            break;
+        case KeyEvent.VK_V:
+            if (Listener.controlHeld())
+            {
+                pasteClipboard();
+            }
+            break;
+        }
+    }
+    
+    /**
+     * Invoked when the mouse is pressed.
+     * 
+     * @param e - the triggering event
+     */
+    public void mousePressed(MouseEvent e)
+    {
+        if (!GameOfLife.consumed(e, this))
+        {
+            if (e.getButton() == MouseEvent.BUTTON1)
+            {
+                if (!selection.mousePressed(e))
+                {
+                    Cell mouseCell = getMouseCell();
+                    if (selectedPattern == null)
+                    {
+                        dragging = true;
+                        
+                        if (map.isAlive(mouseCell.x, mouseCell.y))
+                        {
+                            map.setAlive(mouseCell.x, mouseCell.y, false);
+                            creating = false;
+                        }
+                        else
+                        {
+                            map.setAlive(mouseCell.x, mouseCell.y, true);
+                            creating = true;
+                        }
+                    }
+                    else
+                    {
+                        for (int x = 0; x < selectedPattern.getWidth(); x++)
+                        {
+                            for (int y = 0; y < selectedPattern.getHeight(); y++)
+                            {
+                                map.setAlive(mouseCell.x + x, mouseCell.y + y,
+                                        selectedPattern.pattern[x][y]);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (e.getButton() == MouseEvent.BUTTON3)
+            {
+                selectedPattern = null;
+            }
+        }
+        
+        lastDrag = e.getLocationOnScreen();
+    }
+    
+    /**
+     * Invoked when the mouse is released.
+     * 
+     * @param e - the triggering event
+     */
+    public void mouseReleased(MouseEvent e)
+    {
+        selection.mouseReleased(e);
+        dragging = false;
+    }
+    
+    /**
+     * Invoked when the mouse is dragged.
+     * 
+     * @param e - the triggering event
+     */
+    public void mouseDragged(MouseEvent e)
+    {
+        if (!GameOfLife.consumed(e, this))
+        {
+            if (dragging)
+            {
+                Cell mouseCell = getMouseCell();
+                map.setAlive(mouseCell.x, mouseCell.y, creating);
+            }
+            else
+            {
+                selection.mouseDragged(e);
+            }
+        }
+        
+        lastDrag = e.getLocationOnScreen();
+    }
+    
+    /**
+     * Invoked when the mouse wheel is scrolled.
+     * 
+     * @param e - the triggering event
+     */
+    public void mouseWheel(MouseWheelEvent e)
+    {
+        zoom(-ZOOM_SPEED_MOUSE * zoom * e.getWheelRotation());
+    }
+    
+    /**
+     * Zooms by the given amount.
+     * The zoom is adjusted by the given amount and kept between {@link #MIN_ZOOM} and
+     *  {@link #MAX_ZOOM}.
+     * The x- and y-coordinates of the Grid are also adjusted so that the cursor is kept over the
+     *  same cell before and after the zoom change.
+     * 
+     * @param amount - the amount to change the zoom, in pixels
+     */
+    protected void zoom(double amount)
+    {
+        double prevZoom = zoom;
+        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom + amount));
+        
+        x -= (DisplayMonitor.screen.width - zoom/prevZoom*DisplayMonitor.screen.width)/zoom
+                *Listener.getMouse().x/DisplayMonitor.screen.width;
+        y -= (DisplayMonitor.screen.height - zoom/prevZoom*DisplayMonitor.screen.height)/zoom
+                *Listener.getMouse().y/DisplayMonitor.screen.height;
+    }
+    
+    /**
+     * Converts the given pixel value to a cell location.
+     * That is, the value scaled by the current zoom is returned, so that this method is equivalent
+     *  to the statement {@code pixel/zoom}.
+     * Examples:
+     * <ul>
+     * <li>{@code toCell(0) = 0}</li>
+     * <li>{@code toCell(screen_width)} is the number of cell shown on the screen</li>
+     * <li>{@code toCell(mouse_x)} is the x-coordinate of the cell that the mouse is currently
+     *  hovering over, shifted by -{@link #x}.</li>
+     * </ul>
+     * 
+     * @param pixel - the pixel value to be converted to the cell scale
+     * @return the cell equivalent of the given pixel value
+     * @see #toPixel(double)
+     */
+    protected double toCell(double pixel)
+    {
+        return pixel / zoom;
+    }
+    
+    /**
+     * Converts the given cell value to a pixel location.
+     * That is, the value is scaled by the current zoom is returned, so this method is equivalent
+     *  to the statement {@code cell*zoom}.
+     * Examples:
+     * <ul>
+     * <li>{@code toPixel(0) = 0}</li>
+     * <li>{@code toPixel(1) = zoom}</li>
+     * </ul>
+     * 
+     * @param cell - the cell value to be converted to the pixel scale
+     * @return the pixel equivalent of the given cell value
+     * @see #toCell(double)
+     */
+    protected double toPixel(double cell)
+    {
+        return cell * zoom;
+    }
+    
+    /**
+     * Gets the Cell over which the mouse is currently hovering.
+     * 
+     * @return the Cell whose coordinates are the coordinates of the cell currently below the mouse
+     */
+    private Cell getMouseCell()
+    {
+        return new Cell(roundToward0(x + toCell(Listener.getMouse().x)),
+                roundToward0(y + toCell(Listener.getMouse().y)));
+    }
+    
+    /**
+     * Gets the integer farthest from 0 that is closer to 0 (or the same distance)than the given
+     *  double.
+     * That is, if the given value is less than 0, it is truncated and decremented, and if it is
+     *  greater than or equal to 0 it is simply truncated.
+     * 
+     * @param a - the value to which to round towards 0
+     * @return the given value, rounded (truncated) "towards" 0
+     */
+    private static int roundToward0(double a)
+    {
+        if (a < 0)
+        {
+            return (int) a - 1;
+        }
+        return (int) a;
+    }
+    
+    /**
+     * Draws the Grid on the screen.
+     * Note that any drawing operations before this will be erased because the entire screen is
+     *  filled with the background color of the Grid.
+     * 
+     * @param g - the graphics context
+     */
+    public void draw(Graphics2D g)
+    {
+        g.setColor(backgroundColor);
+        g.fillRect(0, 0, DisplayMonitor.screen.width, DisplayMonitor.screen.height);
+        
+        ArrayList<Cell> alive = map.getAlive();
+        
+        if (zoom <= FADE_START)
+        {
+            g.setColor(aliveColor);
+            
+            for (int i = 0; i < alive.size(); i++)
+            {
+                Cell c = alive.get(i);
+                if (c.x >= x - 1 && c.y >= y - 1 && c.x < x + toCell(DisplayMonitor.screen.width)
+                        && c.y < y + toCell(DisplayMonitor.screen.height))
+                {
+                    g.fillRect((int) toPixel(c.x - x) + (c.x > x ? 1 : 0),
+                            (int) toPixel(c.y - y) + (c.y > y ? 1 : 0),
+                            (int) zoom, (int) zoom);
+                }
+            }
+            
+            if (selectedPattern != null)
+            {
+                Cell mouse = getMouseCell();
+                for (int i = 0; i < selectedPattern.getWidth(); i++)
+                {
+                    for (int j = 0; j < selectedPattern.getHeight(); j++)
+                    {
+                        if (selectedPattern.pattern[i][j])
+                        {
+                            Cell c = new Cell(mouse.x + i, mouse.y + j);
+                            if (c.x >= x - 1 && c.y >= y - 1 && c.x < x + toCell(DisplayMonitor.screen.width)
+                                    && c.y < y + toCell(DisplayMonitor.screen.height))
+                            {
+                                g.fillRect((int) toPixel(c.x - x) + (c.x > x ? 1 : 0),
+                                        (int) toPixel(c.y - y) + (c.y > y ? 1 : 0),
+                                        (int) zoom, (int) zoom);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            aliveImage.setScale(zoom / aliveImage.getWidth(), zoom / aliveImage.getHeight());
+            
+            for (int i = 0; i < alive.size(); i++)
+            {
+                Cell c = alive.get(i);
+                if (c.x >= x - 1 && c.y >= y - 1 && c.x < x + toCell(DisplayMonitor.screen.width)
+                        && c.y < y + toCell(DisplayMonitor.screen.height))
+                {
+                    g.setClip((int) (toPixel(c.x - x) + (c.x > x ? 1 : 0)),
+                            (int) (toPixel(c.y - y) + (c.y > y ? 1 : 0)), (int) zoom, (int) zoom);
+                    
+                    aliveImage.draw((int) (toPixel(c.x - x) + (c.x > x ? 1 : 0)),
+                            (int) (toPixel(c.y - y) + (c.y > y ? 1 : 0)), g);
+                }
+            }
+            
+            if (selectedPattern != null)
+            {
+                Cell mouse = getMouseCell();
+                for (int i = 0; i < selectedPattern.getWidth(); i++)
+                {
+                    for (int j = 0; j < selectedPattern.getHeight(); j++)
+                    {
+                        if (selectedPattern.pattern[i][j])
+                        {
+                            Cell c = new Cell(mouse.x + i, mouse.y + j);
+                            if (c.x >= x - 1 && c.y >= y - 1 && c.x < x + toCell(DisplayMonitor.screen.width)
+                                    && c.y < y + toCell(DisplayMonitor.screen.height))
+                            {
+                                g.setClip((int) (toPixel(c.x - x) + (c.x > x ? 1 : 0)),
+                                        (int) (toPixel(c.y - y) + (c.y > y ? 1 : 0)), (int) zoom, (int) zoom);
+                                
+                                aliveImage.draw((int) (toPixel(c.x - x) + (c.x > x ? 1 : 0)),
+                                        (int) (toPixel(c.y - y) + (c.y > y ? 1 : 0)), g);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            g.setClip(null);
+        }
+        
+        Composite c = g.getComposite();
+        if (zoom >= GRID_ZOOM)
+        {
+            g.setColor(dividerColor);
+            
+            if (zoom <= FADE_START)
+            {
+                g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC,
+                        (float) (zoom/FADE_START)));
+            }
+            
+            for (double x0 = Math.floor(x) - x; x0 < DisplayMonitor.screen.width / zoom + 1; x0++)
+            {
+                g.drawLine((int) toPixel(x0), 0, (int) toPixel(x0), DisplayMonitor.screen.height);
+            }
+            for (double y0 = Math.floor(y) - y; y0 < DisplayMonitor.screen.height / zoom + 1; y0++)
+            {
+                g.drawLine(0, (int) toPixel(y0), DisplayMonitor.screen.width, (int) toPixel(y0));
+            }
+        }
+        g.setComposite(c);
+        
+        selection.draw(g);
+    }
+    
+    /**
+     * Draws diagnostics information in the given rectangular area.
+     * Note that the information is not guaranteed (or clipped) to the given area, in fact, some
+     *  text is guaranteed to be drawn to the left and above the area.
+     * The text inside the area is also not shortened or cropped if the area is small.
+     * The font currently used by the graphics context is used to draw the diagnostic text.
+     * 
+     * @param g - the graphics context
+     * @param area - the area in which diagnostic information should be drawn
+     */
+    public synchronized void drawDiagnostics(Graphics2D g, Rectangle area)
+    {
+        g.setColor(Diagnostics.border);
+        g.drawRect(area.x, area.y, area.width, area.height);
+        g.drawString("Grid Information", area.x, area.y - 2);
+        
+        g.drawString("x: " + Diagnostics.df.format(x) + " [tile] " + 
+                Diagnostics.df.format(toPixel(x)) + " [px]",
+                area.x + 5, area.y + 20);
+        g.drawString("y: " + Diagnostics.df.format(y) + " [tile] " + 
+                Diagnostics.df.format(toPixel(y)) + " [px]",
+                area.x + 5, area.y + 40);
+        
+        g.drawString("Zoom: " + Diagnostics.df.format(zoom), area.x + 5, area.y + 60);
+        g.drawString("Dragging: " + dragging, area.x + 5, area.y + 80);
+        g.drawString("Creating: " + creating, area.x + 5, area.y + 100);
+        
+        g.drawString("Last Drag:", area.x + 5, area.y + 120);
+        g.drawString(Diagnostics.df.format(lastDrag.x) + " [px] " + 
+        Diagnostics.df.format(toCell(lastDrag.x)) + " [tile]",
+                area.x + 20, area.y + 140);
+        g.drawString(Diagnostics.df.format(lastDrag.y) + " [px] " + 
+                Diagnostics.df.format(toCell(lastDrag.y)) + " [tile]",
+                area.x + 20, area.y + 160);
+        
+        for (int i = 0; i <= 10; i++)
+        {
+            g.drawLine(area.x - 4, area.y + area.height - i*area.height/10,
+                    area.x, area.y + area.height - i*area.height/10);
+            g.drawString(String.valueOf(maxSimulationTime * i/10),
+                    area.x - 30, area.y + area.height - i*area.height/10 + 5);
+        }
+        
+        while (simulationTimes.size() > area.width - 1)
+        {
+            simulationTimes.remove(0);
+        }
+        
+        g.setColor(simulationTimesColor);
+        for (int i = 0; i < simulationTimes.size(); i++)
+        {
+            g.drawRect(area.x + simulationTimes.size() - i - 1,
+                    (int) (area.y + area.height - 
+                            area.height*simulationTimes.get(i)/maxSimulationTime - 2),
+                    1, 1);
+        }
+    }
 }

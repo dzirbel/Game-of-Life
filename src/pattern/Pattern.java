@@ -1,393 +1,215 @@
 package pattern;
 
-import graphics.AcceleratedImage;
-
 import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Rectangle2D;
 
-import main.Information;
-
-import utils.ExceptionHandler;
+import image.ImageLoader;
+import graphics.AcceleratedImage;
+import grid.Grid;
 
 /**
- * Represents a single Pattern made up of alive and dead cells arranged in a two dimensional array of booleans.
- * Each pattern has a name that is most commonly used when space is limited, an expanded name that is occasionally used when space is not, and a category.
- * Additionally, every pattern had an AcceleratedImage that is used as a visual representation of the Pattern.
+ * Defines a single pattern as a rectangular area of cells.
+ * Patterns have a full name, which is typically displayed in a tooltip, and a short name, which
+ *  is shown on the screen, where space may be limited.
+ * The pattern acts a non-writeable holder for the full name, short name, and pattern array.
  * 
- * @author Dominic
+ * @author zirbinator
  */
-public class Pattern 
+public class Pattern implements Comparable<Pattern>
 {
-	public AcceleratedImage img = null;
-	
-	public boolean[][] pattern;
-	private boolean fillBlack;
-	
-	private Information info;
-	
-	public int width;			// the width of the pattern array, equal to pattern[0].length
-	public int height;			// the height of the pattern array, equal to pattern.length
-	public int imageWidth;		// the width of the pattern's image, in pixels
-	public int imageHeight;		// the height of the pattern's image, in pixels
-	private int aliveIndex;
-	
-	public String name;
-	public String expandedName;
-	public String category;
-	
-	/**
-	 * Creates a new Pattern with the given variables and Information.
-	 * The expanded name is set to the given name.
-	 * The size of the image is set to 0, 0 and the image is not initialized until setSize() is called.
-	 * 
-	 * @param pattern - the array of booleans that make up the pattern
-	 * @param name - the name of this pattern
-	 * @param category - the name of this pattern's category
-	 * @param info - the current Information
-	 */
-	public Pattern(boolean[][] pattern, String name, String category, Information info)
-	{
-		this.pattern = pattern;
-		this.name = name;
-		this.category = category;
-		this.info = info;
-		expandedName = name;
-		width = pattern[0].length;
-		height = pattern.length;
-		fillBlack = false;
-		aliveIndex = info.imageLoader.getIndex("alive");
-		setSize(0, 0);
-	}
-	
-	/**
-	 * Creates a new Pattern with the given variables and Information.
-	 * The expanded name is set to the given name.
-	 * The size of the image is set to the given dimensions.
-	 * 
-	 * @param pattern - the array of booleans that make up the pattern
-	 * @param name - the name of this pattern
-	 * @param category - the name of this pattern's category
-	 * @param imageWidth - the width of the image made for this pattern, in pixels
-	 * @param imageHeight - the height of the image made for this pattern, in pixels
-	 * @param info - the current Information
-	 */
-	public Pattern(boolean[][] pattern, String name, String category, int imageWidth, int imageHeight, Information info)
-	{
-		this.pattern = pattern;
-		this.category = category;
-		this.name = name;
-		this.info = info;
-		expandedName = name;
-		width = pattern[0].length;
-		height = pattern.length;
-		fillBlack = false;
-		aliveIndex = info.imageLoader.getIndex("alive");
-		setSize(imageWidth, imageHeight);
-	}
-	
-	/**
-	 * Creates a new Pattern with the given variables and Information.
-	 * The expanded name is set to the given one.
-	 * The size of the image is set to 0, 0 and the image is not initialized until setSize() is called.
-	 * 
-	 * @param pattern - the array of booleans that make up the pattern
-	 * @param name - the name of this pattern
-	 * @param expandedName - the full name of this pattern
-	 * @param category - the name of this pattern's category
-	 * @param info - the current Information
-	 */
-	public Pattern(boolean[][] pattern, String name, String expandedName, String category, Information info)
-	{
-		this.pattern = pattern;
-		this.category = category;
-		this.name = name;
-		this.expandedName = expandedName;
-		this.info = info;
-		width = pattern[0].length;
-		height = pattern.length;
-		fillBlack = false;
-		aliveIndex = info.imageLoader.getIndex("alive");
-		setSize(0, 0);
-	}
-	
-	/**
-	 * Creates a new Pattern with the given variables and Information.
-	 * The expanded name is set to the given one.
-	 * The size of the image is set to the given dimensions.
-	 * 
-	 * @param pattern - the array of booleans that make up the pattern
-	 * @param name - the name of this pattern
-	 * @param expandedName - the full name of this pattern
-	 * @param category - the name of this pattern's category
-	 * @param imageWidth - the width of the image made for this pattern, in pixels
-	 * @param imageHeight - the height of the image made for this pattern, in pixels
-	 * @param info - the current Information
-	 */
-	public Pattern(boolean[][] pattern, String name, String expandedName, String category, int imageWidth, int imageHeight, Information info)
-	{
-		this.pattern = pattern;
-		this.category = category;
-		this.name = name;
-		this.info = info;
-		this.expandedName = expandedName;
-		this.width = pattern[0].length;
-		this.height = pattern.length;
-		fillBlack = false;
-		aliveIndex = info.imageLoader.getIndex("alive");
-		setSize(imageWidth, imageHeight);
-	}
-	
-	/**
-	 * Sets the width and height of the image representing this pattern to the given dimensions.
-	 * This erases the any previous drawing to the image, so calls to generateImage() and generateFullSizeImage() must be recalled.
-	 * If setFillBlack() had been called with a true value, the background of the pattern is filled with black.
-	 * If the sizes given are not both greater than 0, the image will not be initialized.
-	 * 
-	 * @param imageWidth - the width of the image made for this pattern, in pixels
-	 * @param imageHeight - the height of the image made for this pattern, in pixels
-	 */
-	public void setSize(double imageWidth, double imageHeight)
-	{
-		setSize((int)imageWidth, (int)imageHeight);
-	}
-	
-	/**
-	 * Sets the width and height of the image representing this pattern to the given dimensions.
-	 * This erases the any previous drawing to the image, so calls to generateImage() and generateFullSizeImage() must be recalled.
-	 * If setFillBlack() had been called with a true value, the background of the pattern is filled with black.
-	 * If the sizes given are not both greater than 0, the image will not be initialized.
-	 * 
-	 * @param imageWidth - the width of the image made for this pattern, in pixels
-	 * @param imageHeight - the height of the image made for this pattern, in pixels
-	 */
-	public void setSize(int imageWidth, int imageHeight)
-	{
-		this.imageWidth = (int)imageWidth;
-		this.imageHeight = (int)imageHeight;
-		if ((imageWidth > 0) && (imageHeight > 0))
-		{
-			img = new AcceleratedImage(new BufferedImage((int)imageWidth, (int)imageHeight, BufferedImage.TYPE_INT_ARGB), BufferedImage.TRANSLUCENT);
-			if (fillBlack)
-			{
-				Graphics g = img.getGraphics();
-				g.setColor(Color.black);
-				g.fillRect(0, 0, img.getWidth(), img.getHeight());
-			}
-		}
-	}
-	
-	/**
-	 * Sets whether or not the background of the image should be filled with black.
-	 * setSize() is then called, immediately applying the change with the same imageWidth and imageHeight.
-	 * 
-	 * @param fill - true if the background should be black, false otherwise
-	 */
-	public void setFillBlack(boolean fill)
-	{
-		fillBlack = fill;
-		setSize(imageWidth, imageHeight);
-	}
-	
-	/**
-	 * Generates the image used to display the pattern within the selector with the given size (width/height dimension).
-	 * A size for each cell is calculated based on the maximum of the width and height and this is used to scale the alive image.
-	 * x- and y-shifts are calculated in case the pattern is not square and does not completely fill the space in one direction.
-	 * The image is left blank for dead cells and appropriately scaled and positioned "alive" images are used for alive cells.
-	 */
-	public void generateImage()
-	{
-		if (img != null)
-		{
-			double cellWidth = imageWidth/width;
-			double cellHeight = imageHeight/height;
-			double cellSize = Math.min(cellWidth, cellHeight);
-			double xShift = (imageWidth - width*cellSize)/2;
-			double yShift = (imageHeight - height*cellSize)/2;
-			for (int i = 0; i < width; i++)
-			{
-				for (int j = 0; j < height; j++)
-				{
-					if (pattern[j][i])
-					{
-						img.getGraphics().drawImage(info.imageLoader.get(aliveIndex).getBufferedImage(), (int)(i*cellSize + xShift), (int)(j*cellSize + yShift),
-								(int)cellSize, (int)cellSize, null);
-					}
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Returns a duplicate of the current pattern with the same array, category, name, and Information.
-	 */
-	public Pattern clone()
-	{
-		return new Pattern(pattern, name, expandedName, category, imageWidth, imageHeight, info);
-	}
-	
-	/**
-	 * Generates an image that is scaled only based on the current zoom value,
-	 *  used after the pattern has been selected and is now being dragged around the window.
-	 * The image size is set to the necessary size before any drawing is done.
-	 */
-	public void generateFullSizeImage()
-	{
-		setSize(width*info.grid.zoom, height*info.grid.zoom);
-		for (int x = 0; x < width; x++)
-		{
-			for (int y = 0; y < height; y++)
-			{
-				if (pattern[y][x])
-				{
-					img.getGraphics().drawImage(info.imageLoader.get(aliveIndex).getBufferedImage(), (int)(x*info.grid.zoom), (int)(y*info.grid.zoom),
-							(int)info.grid.zoom, (int)info.grid.zoom, null);
-				}
-			}
-		}
-	}
-	
-	/**
-	 * Determines whether the given character represents true or false.
-	 * If the character is 't', it represents true, any other value represents false, though 'f' is used by convention.
-	 * 
-	 * @param c - the character to be tested
-	 * @return value - true if the character is 't', false otherwise
-	 */
-	public static boolean value(char c)
-	{
-		if (c == 't')
-		{
-			return true;
-		}
-		return false;
-	}
-	
-	/**
-	 * Returns the Pattern found at the given filename, initialized with the given Information.
-	 * The size of image of the loaded Pattern is set to the given width and height.
-	 * The loading format is as follows:<br>
-	 * the first folder in the execution folder contains folders named after the category names of the patterns inside<br>
-	 * these category folders contain the patterns, named after their name (non-expanded), with the .txt file extension<br>
-	 * the pattern files contain two sections:<br>
-	 * first, there is a 2D grid of t's and f's containing the pattern layout, followed by the standard break (###)<br>
-	 * last, there is the expanded name, all on one line - optional, if not included, the expanded name will be the same as the normal name<br>
-	 * 
-	 * @param filename - the full location of the Pattern relative to the execution folder with the .txt file extension
-	 * @param imageWidth - the width of the image representing the Pattern, in pixels
-	 * @param imageHeight - the height of the image representing the Pattern, in pixels
-	 * @param info - the current Information
-	 * @return Pattern - the Pattern, fully initialized, at the given filename, null if the loading encountered errors
-	 */
-	public static Pattern load(String filename, int imageWidth, int imageHeight, Information info)
-	{
-		try
-		{
-			StringTokenizer tokenizer = new StringTokenizer(filename, File.separator);
-			String category;
-			String name;
-			String expandedName;
-			boolean[][] pattern;
-			if (tokenizer.hasMoreTokens())
-			{
-				tokenizer.nextToken();
-				if (tokenizer.hasMoreTokens())
-				{
-					category = tokenizer.nextToken();
-					if (tokenizer.hasMoreTokens())
-					{
-						name = tokenizer.nextToken();
-						tokenizer = new StringTokenizer(name, ".");
-						name = tokenizer.nextToken();
-						expandedName = name;
-					}
-					else
-					{
-						System.out.println("A pattern was loaded with a faulty filename: no pattern name found.");
-						System.out.println("The filename was " + filename);
-						return null;
-					}
-				}
-				else
-				{
-					System.out.println("A pattern was loaded with a faulty filename: no pattern category found.");
-					System.out.println("The filename was " + filename);
-					return null;
-				}
-			}
-			else
-			{
-				System.out.println("A pattern was loaded with a faulty filename: no folder.");
-				System.out.println("The filename was " + filename);
-				return null;
-			}
-			BufferedReader in = new BufferedReader(new FileReader(filename));
-			ArrayList<String> lines = new ArrayList<String>();
-			String line = new String();
-			while (true)
-			{
-				line = in.readLine();
-				if (line == null)
-				{
-					break;
-				}
-				if (line.equals("###"))
-				{
-					line = in.readLine();
-					expandedName = line;
-					break;
-				}
-				else
-				{
-					lines.add(line);
-				}
-			}
-			int height = lines.size();
-			int width = 0;
-			for (int i = 0; i < lines.size(); i++)
-			{
-				width = Math.max(lines.get(i).length(), width);
-			}
-			pattern = new boolean[height][width];
-			for (int i = 0; i < width; i++)
-			{
-				for (int j = 0; j < height; j++)
-				{
-					try
-					{
-						pattern[j][i] = value(lines.get(j).charAt(i));
-					}
-					catch (Exception ex)
-					{
-						pattern[j][i] = false;
-					}
-				}
-			}
-			return new Pattern(pattern, name, expandedName, category, imageWidth, imageHeight, info);
-		}
-		catch (IOException ex)
-		{
-			ExceptionHandler.receive(ex, filename, "Error thrown when loading the specified Pattern.");
-		}
-		return null;
-	}
-	
-	/**
-	 * Returns the Pattern found at the given filename, initialized with the given Information.
-	 * The size of image of the loaded Pattern is set to the 0, 0 so the image is not initialized.
-	 * 
-	 * @param filename - the full location of the Pattern relative to the execution folder with the .txt file extension
-	 * @param info - the current Information
-	 * @return Pattern - the Pattern, fully initialized, at the given filename, null if the loading encountered errors
-	 */
-	public static Pattern load(String filename, Information info)
-	{
-		return load(filename, 0, 0, info);
-	}
+    private static AcceleratedImage alive;
+    
+    /**
+     * Holds the pattern's data.
+     * Each cell is a single element of the array; true is customarily used for living cells and
+     *  false for dead cells.
+     * The pattern should be traversed as follows:
+     * <pre>
+     * for (int x = 0; x < pattern.length; x++)
+     * {
+     *     for (int y = 0; y < pattern[x].length; y++)
+     *     {
+     *         boolean cell = pattern[x][y];
+     *     }
+     * }
+     * </pre>
+     * That is, the first array indices are typically the "x" coordinates of the pattern and the 
+     *  second indices are the "y" coordinates.
+     * {@link #getWidth()} and {@link #getHeight()} can also be used to find the width and height
+     *  of the pattern, as opposed to {@code pattern.length} and {@code pattern[0].length}.
+     */
+    public final boolean[][] pattern;
+    
+    private static final Color thumbBackground = Color.black;
+    
+    /**
+     * The full name of this Pattern.
+     * This name is typically displayed as a tooltip.
+     */
+    public final String fullName;
+    /**
+     * An abbreviated name of this Pattern.
+     * This name is typically displayed on the screen, since space may be limited.
+     */
+    public final String shortName;
+    
+    static
+    {
+        alive = ImageLoader.load("alive");
+    }
+    
+    /**
+     * Creates a new Pattern with the given map and names.
+     * 
+     * @param pattern - the pattern held by this Pattern
+     * @param fullName - the full name of the Pattern
+     * @param shortName - and abbreviated name for this Pattern
+     */
+    public Pattern(boolean[][] pattern, String fullName, String shortName)
+    {
+        this.pattern = pattern;
+        this.fullName = fullName;
+        this.shortName = shortName;
+    }
+    
+    /**
+     * Creates a new Pattern with the given map and name.
+     * The {@link #shortName} and {@link #fullName} are both set to the given name.
+     * 
+     * @param pattern - the pattern held by this Pattern
+     * @param name - the name of this Pattern
+     */
+    public Pattern(boolean[][] pattern, String name)
+    {
+        this(pattern, name, name);
+    }
+    
+    /**
+     * Gets the width of this Pattern, equal to {@code pattern.length}.
+     * 
+     * @return the width of this Pattern, in cells
+     */
+    public int getWidth()
+    {
+        return pattern.length;
+    }
+    
+    /**
+     * Gets the height of this Pattern, equal to {@code pattern[0].length} (or 0 if
+     *  {@code pattern.length} is 0).
+     * 
+     * @return the height of this Pattern, in cells.
+     */
+    public int getHeight()
+    {
+        if (pattern.length == 0)
+        {
+            return 0;
+        }
+        
+        return pattern[0].length;
+    }
+    
+    /**
+     * Generates a thumbnail image of this Pattern with the given size.
+     * 
+     * @param width - the width of the desired image, in pixels
+     * @param height - the height of the desired image, in pixels
+     * @return an AcceleratedImage of the requested size which visually depicts this Pattern
+     */
+    public AcceleratedImage generateThumb(int width, int height)
+    {
+        AcceleratedImage thumb = new AcceleratedImage(width, height);
+        Graphics2D g = (Graphics2D) thumb.getContents().getGraphics();
+        
+        g.setColor(thumbBackground);
+        g.fillRect(0, 0, width, height);
+        
+        // the size of a single cell in the thumb
+        double cellSize = Math.min((double)width/getWidth(), (double)height/getHeight());
+        // scale the alive image
+        alive.setScale(cellSize/alive.getWidth(), cellSize/alive.getHeight());
+        // compensate for the fact that the given size may not have proportions equal to the
+        //  proportions of this pattern
+        double xShift = (width - cellSize*getWidth())/2;
+        double yShift = (height - cellSize*getHeight())/2;
+        g.setColor(Grid.aliveColor);
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        for (int x = 0; x < getWidth(); x++)
+        {
+            for (int y = 0; y < getHeight(); y++)
+            {
+                if (pattern[x][y])
+                {
+                    g.fill(new Rectangle2D.Double(x*cellSize + xShift, y*cellSize + yShift,
+                            cellSize, cellSize));
+                }
+            }
+        }
+        
+        return thumb;
+    }
+    
+    /**
+     * Determines whether this Pattern is equal to the given Object.
+     * They are equal if any only if the given Object is a pattern with identical full names, short
+     *  names, and patterns.
+     * 
+     * @param o - the object to which to compare this Pattern
+     * @return true if this Pattern equals the given Object, false otherwise
+     * @see Object#equals(Object)
+     */
+    public boolean equals(Object o)
+    {
+        if (o instanceof Pattern)
+        {
+            Pattern p = (Pattern)o;
+            return p.fullName.equals(fullName) && p.shortName.equals(shortName) &&
+                    p.pattern.equals(pattern);
+        }
+        return false;
+    }
+    
+    /**
+     * Returns a String representation of this Pattern, with the format:
+     * <pre>
+     * fullName [shortName]:
+     * 10101010101
+     * 01010101010
+     * 10101010101
+     * 01010101010
+     * </pre>
+     * 
+     * @return a user-friendly String representation of this Pattern
+     * @see Object#toString()
+     */
+    public String toString()
+    {
+        String str = fullName + " [" + shortName + "]:\n";
+        
+        for (int y = 0; y < getHeight(); y++)
+        {
+            for (int x = 0; x < getWidth(); x++)
+            {
+                str += pattern[x][y] ? "1" : "0";
+            }
+            str += "\n";
+        }
+        
+        return str;
+    }
+    
+    /**
+     * Compares this Pattern to the given one, based on the full names of each Pattern.
+     * 
+     * @param p - the Pattern to which to compare
+     * @return a comparison
+     * @see Comparable#compareTo(Object)
+     */
+    public int compareTo(Pattern p)
+    {
+        return -fullName.compareTo(p.fullName);
+    }
 }

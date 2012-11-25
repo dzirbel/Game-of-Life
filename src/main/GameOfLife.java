@@ -1,175 +1,243 @@
 package main;
 
-import io.Listener;
+import graphics.DisplayMonitor;
+import grid.Grid;
 
+import image.ImageLoader;
+
+import java.awt.Composite;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Toolkit;
-import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferStrategy;
 
-import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 /**
- * The main class that is run to run the Game of Life simulation.
+ * Handles launching the Game of Life simulation, running it in a rendering loop, and exiting.
+ * This class also contains the main components of the game, such as the {@link Grid} that holds
+ *  the state of the simulation and {@link Toolbar} that contains most of the interface.
  * 
- * @author Dominic
+ * @author zirbinator
  */
 public class GameOfLife
 {
-	private BufferStrategy strategy;
-	
-	private Image icon = new ImageIcon("images/icon.png").getImage();
-	private Information info;
-	private int drawLoops;					// number of drawing loops
-	private int longDrawLoops;				// times that rendering took over the period
-	
-	public JFrame frame;
-	
-	public static long period = 20;			// total time for the drawing cycle in ms
-	private long drawStart;
-	private long drawEnd;
-	private long renderEnd;
-	private long sleepTime;
-	
-	public Thread toolbarThread;
-	public Thread gridThread;
-	
-	/**
-	 * Runs the simulation by creating a GameOfLife object and calling launch() and then run().
-	 * 
-	 * @param args - the command-line arguments
-	 */
-	public static void main(String[] args)
-	{
-		GameOfLife gameOfLife = new GameOfLife();
-		gameOfLife.launch();
-		gameOfLife.run();
-	}
-	
-	/**
-	 * Launches the GameOfLife by loading various components, particularly the Information which initializes most of the other classes.
-	 */
-	public void launch()
-	{
-		info = new Information();
-		info.init(this);
-		
-		info.listener.requestNotification(this, "exit", Listener.TYPE_KEY_PRESSED, KeyEvent.VK_ESCAPE);
-		
-		frame = new JFrame("Game of Life");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setIconImage(icon);
-		frame.setContentPane(new Panel());
-		frame.setUndecorated(true);
-		frame.setResizable(false);
-		frame.addKeyListener(info.listener);
-		frame.addMouseListener(info.listener);
-		frame.addMouseMotionListener(info.listener);
-		frame.addMouseWheelListener(info.listener);
-		info.device.setFullScreenWindow(frame);
-		frame.createBufferStrategy(2);
-		
-		toolbarThread = new Thread(info.toolbar);
-		toolbarThread.start();
-		gridThread = new Thread(info.grid);
-		gridThread.start();
-	}
-	
-	/**
-	 * Runs the simulation by drawing and sleeping so that each draw cycle takes the preset period length of time.
-	 * If rendering took over the period, a warning message is printed to the console.
-	 */
-	public void run()
-	{
-		while (true)
-		{
-			drawStart = System.nanoTime();
-			strategy = frame.getBufferStrategy();								// begin "draw"
-			Graphics2D g = (Graphics2D)strategy.getDrawGraphics();
-			draw(g);
-			g.dispose();														// end "draw"
-			drawEnd = System.nanoTime();
-			
-			strategy.show();													// begin and end "render"
-			Toolkit.getDefaultToolkit().sync();
-			renderEnd = System.nanoTime();
-			
-			sleepTime = 1000000*period - (System.nanoTime() - drawStart);		// begin "sleep"
-			if (sleepTime <= 0)
-			{
-				System.out.println("[WARNING] Rendering took over the allotted period by " + (-sleepTime/1000000) + " ms.");
-				sleepTime = 0;
-				longDrawLoops++;
-			}
-			else
-			{
-				try
-				{
-					Thread.sleep(sleepTime/1000000);
-				}
-				catch (InterruptedException ex) { }
-			}																	// end "sleep"
-			drawLoops++;
-			info.diagnostics.recordRenderLoop(drawEnd - drawStart, renderEnd - drawEnd, sleepTime);
-		}
-	}
-	
-	/**
-	 * Called when the escape key is pressed or the "X" is clicked in the operation bar, immediately closes the program.
-	 * 
-	 * @param event - the Event that originated this call [not used]
-	 */
-	public void exit(KeyEvent event)
-	{
-		System.out.println(longDrawLoops + " [" + 100*((double)longDrawLoops)/((double)drawLoops) + 
-				"%] of the total number of drawing loops, " + drawLoops + ", took over the period.");
-		System.exit(0);
-	}
-	
-	/**
-	 * Draws the simulation to the screen with the Graphics that should originate from the JFrame.
-	 * First, the window is drawn, making up the background.
-	 * Then, the utility pane is drawn on top of which is the pattern selector.
-	 * Finally, the operation bar is drawn in the top right of the screen.
-	 * 
-	 * @param g - the current Graphics context of the JFrame
-	 */
-	public void draw(Graphics2D g)
-	{
-		info.grid.draw(g);
-		info.toolbar.draw(g);
-		info.toolbar.selector.draw(g);
-		info.controlBar.draw(g);
-		info.gui.draw(g);
-		info.diagnostics.draw(g);
-	}
-	
-	/**
-	 * Allows for screenshots and screen recording to capture the screen by providing a more typical context in which to draw.
-	 * 
-	 * @author Dominic
-	 */
-	private class Panel extends JPanel
-	{		
-		private static final long serialVersionUID = 1L;
-		
-		/**
-		 * Called during a typical drawing method, simply calls the Game of Life's draw method.
-		 * This allows for screenshots to be made with a conventional method.
-		 * At the beginning of the execution, a null reference is often made because this method is called before initialization is complete.
-		 * Thus, any NullPointerExceptions thrown (either because info or gameOfLife is null) are completely ignored.
-		 */
-		public void paintComponent(Graphics g)
-		{
-			try
-			{
-				draw((Graphics2D)g);
-			}
-			catch (NullPointerException ex) { }
-		}
-	}
+    private ControlBar controlBar;
+    
+    private Diagnostics diagnostics;
+    
+    private static GameOfLife GoL;
+    private Grid grid;
+    
+    private JFrame frame;
+    
+    /**
+     * The amount of time taken each render loop in milliseconds.
+     * That is, after the 
+     */
+    public static final long period = 20;
+    
+    private Toolbar toolbar;
+    
+    /**
+     * The main method of the program.
+     * A new GameOfLife object is instantiated and launched.
+     * 
+     * @param args - command-line arguments, ignored
+     * @see #run()
+     */
+    public static void main(String[] args)
+    {
+        GoL = new GameOfLife();
+        GoL.run();
+    }
+    
+    /**
+     * Runs the Game of Life.
+     * First a full-screen exclusive window is created with the {@link DisplayMonitor}.
+     * Next, the components of the simulation, such as the {@link Grid} are initialized.
+     * Finally, this thread is looped infinitely in a draw/render/sleep loop.
+     */
+    public void run()
+    {
+        frame = DisplayMonitor.createFrame("Game of Life", new Panel());
+        frame.setIconImage(ImageLoader.loadImage("icon"));
+        
+        diagnostics = new Diagnostics();
+        grid = new Grid();
+        toolbar = new Toolbar();
+        controlBar = new ControlBar();
+        
+        long drawStart;
+        long drawEnd;
+        long renderEnd;
+        long sleepTime;
+        BufferStrategy strategy;
+        
+        while (true)
+        {
+            drawStart = System.nanoTime();
+            // being "draw"
+            strategy = frame.getBufferStrategy();
+            Graphics2D g = (Graphics2D) strategy.getDrawGraphics();
+            draw(g);
+            g.dispose();
+            // end "draw"
+            drawEnd = System.nanoTime();
+            
+            // begin "render"
+            strategy.show();
+            Toolkit.getDefaultToolkit().sync();
+            // end "render"
+            renderEnd = System.nanoTime();
+            
+            sleepTime = period - (System.nanoTime() - drawStart)/1000000;
+            if (sleepTime <= 0)
+            {
+                System.out.println("[WARNING] Rendering took over the allotted period by " +
+                        -sleepTime + " ms.");
+            }
+            else
+            {
+                try
+                {
+                    Thread.sleep(sleepTime);
+                }
+                catch (InterruptedException ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+            
+            diagnostics.record(drawEnd - drawStart, renderEnd - drawEnd,
+                    System.nanoTime() - renderEnd, System.nanoTime() - drawStart, sleepTime <= 0);
+        }
+    }
+    
+    /**
+     * Gets the {@link Grid} object holding the state of the simulation.
+     * 
+     * @return the {@link Grid} used by this Game of Life
+     */
+    public static Grid getGrid()
+    {
+        return GoL.grid;
+    }
+    
+    /**
+     * Gets the {@link Toolbar} object responsible for the majority of the interface.
+     * 
+     * @return the {@link Toolbar} used by this Game of Life
+     */
+    public static Toolbar getToolbar()
+    {
+        return GoL.toolbar;
+    }
+    
+    /**
+     * Gets the {@link ControlBar} object responsible for closing and minimizing the window.
+     * 
+     * @return the {@link ControlBar} used by this Game of Life
+     */
+    public static ControlBar getControlBar()
+    {
+        return GoL.controlBar;
+    }
+    
+    /**
+     * Minimizes the window containing this Game of Life.
+     */
+    public static void minimize()
+    {
+        GoL.frame.setState(Frame.ICONIFIED);
+    }
+    
+    /**
+     * Determines whether the given event should be consumed for the given object.
+     * That is, this method checks whether objects "higher" in the notification chain are using
+     *  this event, in which case the given object may not.
+     * For example, if the {@link Toolbar} were to check whether it can process (handle) a certain
+     *  event, it must call this method with the event and <code>this</code>.
+     * The method will check whether the {@link ControlBar} would handle this event, seeing as it
+     *  has precedence over the {@link Toolbar}.
+     * If the {@link ControlBar} has consumed the event, true would be returned, and the
+     *  {@link Toolbar} should not handle it, otherwise false would be returned, and the
+     *  {@link Toolbar} may handle it.
+     * 
+     * @param e - the event that may or may not be handled
+     * @param o - the object that may or may not handle the event (should be <code>this</code> in
+     *  most cases)
+     * @return true if the event has been consumed and should not be handled by the object, false
+     *  if the event has not been consumed and may be handled by the object
+     */
+    public static boolean consumed(MouseEvent e, Object o)
+    {
+        if (o == GoL.controlBar)
+        {
+            return false;
+        }
+        else if (o == GoL.toolbar)
+        {
+            return GoL.controlBar.consumed(e);
+        }
+        else if (o == GoL.grid)
+        {
+            return GoL.controlBar.consumed(e) || GoL.toolbar.consumed(e);
+        }
+        return true;
+    }
+    
+    /**
+     * Exits the Game of Life program.
+     * Exiting diagnostic information is printed and then a call to <code>System.exit(0)</code> is
+     *  made.
+     * 
+     * @see Diagnostics#printExitInfo()
+     * @see System#exit(int);
+     */
+    public static void exit()
+    {
+        GoL.diagnostics.printExitInfo();
+        System.exit(0);
+    }
+    
+    /**
+     * Draws the Game of Life on the given graphics context.
+     * 
+     * @param g - the graphics context of the screen or any buffers
+     */
+    private void draw(Graphics2D g)
+    {
+        Composite c = g.getComposite();
+        grid.draw(g);
+        g.setComposite(c);
+        toolbar.draw(g);
+        g.setComposite(c);
+        controlBar.draw(g);
+        g.setComposite(c);
+        diagnostics.draw(g);
+    }
+    
+    /**
+     * A lightweight panel that allows for more operating-system compatibility, such as
+     *  screenshots when it is applied to the full-screen window.
+     * 
+     * @author zirbinator
+     */
+    private class Panel extends JPanel
+    {
+        private static final long serialVersionUID = 1L;
+        
+        public void paintComponent(Graphics g)
+        {
+            try
+            {
+                draw((Graphics2D) g);
+            }
+            catch (NullPointerException ex) { }
+        }
+    }
 }
