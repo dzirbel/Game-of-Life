@@ -370,7 +370,7 @@ public class Toolbar implements Runnable
             bounds.y = Math.max(0, Math.min(DisplayMonitor.screen.height - height, y));
             
             setBounds();
-            patterns.onToolbarMove();
+            patterns.onResize();
         }
     }
     

@@ -120,7 +120,7 @@ public class PatternSelector implements Runnable
         while (true)
         {
             elapsed = (System.nanoTime() - lastUpdate)/1000000;
-            onToolbarMove();
+            onResize();
             if (state == SelectorState.MOVING_OUT)
             {
                 slidePos += (double)elapsed/slideTime;
@@ -275,7 +275,7 @@ public class PatternSelector implements Runnable
                 patterns.add(new Pattern(pattern, fullName, shortName));
             }
             
-            folders.add(new PatternFolder(name, patterns));
+            folders.add(new PatternFolder(this, name, patterns));
         }
         
         in.close();
@@ -290,14 +290,16 @@ public class PatternSelector implements Runnable
             }
         }
         minSlidePos = -25.0/maxWidth;
-        onToolbarMove();
+        onResize();
     }
     
     /**
-     * This method should be invoked by the enclosing Toolbar whenever it is moved, in order that
-     *  there is no lag between the movement of the Toolbar and the PatternSelector.
+     * This method should be invoked whenever a change is made forcing PatternSelector to resize or
+     *  move its components.
+     * For example, this method should be called whenever the enclosing Toolbar moves and whenever
+     *  the internal PatternFolders change their size.
      */
-    public void onToolbarMove()
+    public void onResize()
     {
         Rectangle toolbarBounds = toolbar.getBounds();
         int x = (int) (toolbarBounds.x - width + sideBuffer);

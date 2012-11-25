@@ -105,6 +105,7 @@ public class PatternFolder implements Runnable
      */
     private static final long openTime = 100;
     
+    private PatternSelector selector;
     /**
      * The location of the PatternFolder depiction on the screen, in pixels.
      * This should be controlled by the enclosing PatternSelector, along with the on/off state.
@@ -147,8 +148,9 @@ public class PatternFolder implements Runnable
      * @param name - the name of this PatternFolder
      * @param patterns - the Patterns held by this PatternFolder
      */
-    public PatternFolder(String name, ArrayList<Pattern> patterns)
+    public PatternFolder(PatternSelector selector, String name, ArrayList<Pattern> patterns)
     {
+        this.selector = selector;
         setName(name);
         setPatterns(patterns);
         
@@ -374,6 +376,9 @@ public class PatternFolder implements Runnable
         {
             size = new Dimension(width, openHeight);
         }
+        
+        selector.onResize();
+        
         synchronized (nameLocation)
         {
             nameLocation = null;
