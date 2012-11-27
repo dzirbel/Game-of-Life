@@ -282,7 +282,22 @@ public class Selection implements Runnable
      */
     public void setSelection(Rectangle selection)
     {
-        this.selection = new Rectangle(selection);
+        if (selection.width == 0 || selection.height == 0)
+        {
+            this.selection = null;
+        }
+        else
+        {
+            this.selection = new Rectangle(selection);
+        }
+        
+        
+        if (!created)
+        {
+            toolbarState = ToolbarState.MOVING_OUT;
+        }
+        
+        created = true;
     }
     
     /**
@@ -457,20 +472,7 @@ public class Selection implements Runnable
             int top = (int)Math.round(selection.getMinY());
             int bottom = (int)Math.round(selection.getMaxY());
             
-            if (left == right || bottom == top)
-            {
-                selection = null;
-            }
-            else
-            {
-                selection = new Rectangle2D.Double(left, top, right - left, bottom - top);
-                if (!created)
-                {
-                    toolbarState = ToolbarState.MOVING_OUT;
-                }
-                
-                created = true;
-            }
+            setSelection(new Rectangle(left, top, right - left, bottom - top));
             selecting = false;
         }
         directionHeld = Direction.NONE;
