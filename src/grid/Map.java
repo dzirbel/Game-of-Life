@@ -241,6 +241,21 @@ public class Map
     }
     
     /**
+     * Gets the number of cells which are currently alive.
+     * That is, this is the size of the list returned by {@link #getAlive()}, but is faster than
+     *  the statement:
+     * <pre>
+     * getAlive().size();
+     * </pre>
+     * 
+     * @return the number of living cells in the current generation
+     */
+    public synchronized int getNumberAlive()
+    {
+        return living.size();
+    }
+    
+    /**
      * Updates the Map by simulating the next generation and setting the contents of the Map to the
      *  results of the simulation.
      * The generation counter is also incremented.

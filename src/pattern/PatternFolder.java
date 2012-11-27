@@ -25,6 +25,7 @@ import main.GameOfLife;
  * Each PatternFolder holds a list of {@link Pattern}s and a name associated with the folder,
  *  and is primarily responsible for drawing a visual pattern and allowing the user to select
  *  patterns via mouse input, in conjunction with a {@link PatternSelector}.
+ * TODO show pattern icons in folder image
  * 
  * @author zirbinator
  */

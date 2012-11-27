@@ -275,6 +275,17 @@ public class Selection implements Runnable
     }
     
     /**
+     * Sets the currently selected area.
+     * Note that no bound-checking, etc. is done with the given area.
+     * 
+     * @param selection - the area of the grid to be selected by this Selection
+     */
+    public void setSelection(Rectangle selection)
+    {
+        this.selection = new Rectangle(selection);
+    }
+    
+    /**
      * Gets the location of the current selection on the screen.
      * 
      * @return the location of the selection, in pixels
