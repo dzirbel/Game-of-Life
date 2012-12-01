@@ -25,7 +25,6 @@ import main.GameOfLife;
  * Each PatternFolder holds a list of {@link Pattern}s and a name associated with the folder,
  *  and is primarily responsible for drawing a visual pattern and allowing the user to select
  *  patterns via mouse input, in conjunction with a {@link PatternSelector}.
- * TODO show pattern icons in folder image
  * 
  * @author zirbinator
  */
@@ -35,6 +34,7 @@ public class PatternFolder implements Runnable
     private AcceleratedImage folderFront;
     private ArrayList<Pattern> patterns;
     private ArrayList<AcceleratedImage> thumbs;
+    private ArrayList<AcceleratedImage> largeThumbs;
     
     private boolean on;
     /**
@@ -99,6 +99,10 @@ public class PatternFolder implements Runnable
      * The height of a single pattern in the PatternFolder depiction when it is open.
      */
     private static final int patternHeight = 22;
+    /**
+     * The size of each thumbnail shown in the folder depiction, in pixels.
+     */
+    private static final int largeThumbSize = 28;
     
     private static final long period = 15;
     /**
@@ -269,9 +273,11 @@ public class PatternFolder implements Runnable
         this.patterns = patterns;
         ListUtil.sort(this.patterns);
         thumbs = new ArrayList<AcceleratedImage>();
+        largeThumbs = new ArrayList<AcceleratedImage>();
         for (int i = 0; i < this.patterns.size(); i++)
         {
             thumbs.add(this.patterns.get(i).generateThumb(patternHeight - 2, patternHeight - 2));
+            largeThumbs.add(this.patterns.get(i).generateThumb(largeThumbSize, largeThumbSize));
         }
         openHeight = Math.max(closedHeight,
                 bottomBuffer + this.patterns.size()*patternHeight + topBuffer);
@@ -467,6 +473,7 @@ public class PatternFolder implements Runnable
         }
         
         folderBack.draw(folderLocation.x, size.height - folderLocation.y, gImg);
+        drawThumbnails(gImg);
         folderFront.setScale(1 - folderOpenAmount, 1);
         folderFront.draw(folderLocation.x, size.height - folderLocation.y, gImg);
         
@@ -522,6 +529,40 @@ public class PatternFolder implements Runnable
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.drawString(patterns.get(patternIndex).shortName, box.x + box.height + 3, box.y + box.height - 5);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+    }
+    
+    /**
+     * Draws the pattern thumbnails into the folder depiction.
+     * This should be called after drawing the back of the folder and before drawing the front.
+     * The drawing is done relative to the top-left of the PatternFolder's location rather to the
+     *  screen, and so either an image graphics context should be used or a screen context must be
+     *  translated prior to calling this function.
+     * 
+     * @param g - the graphics context
+     */
+    private void drawThumbnails(Graphics2D g)
+    {
+        if (largeThumbs.size() == 0)
+        {
+            return;
+        }
+        
+        final double thetaShift = -Math.PI/8;
+        final double radius = folderSize/2.0;
+        
+        double thetaVariation = Math.min(Math.PI*largeThumbs.size()/20, Math.PI/4);
+        double theta;
+        for (int i = 0; i < largeThumbs.size(); i++)
+        {
+            theta = thetaShift + thetaVariation - i*thetaVariation*2/(thumbs.size() - 1);
+            AffineTransform t = new AffineTransform();
+            t.translate(folderLocation.x + radius*Math.cos(theta),
+                    size.height - folderLocation.y + folderSize/2 + radius*Math.sin(theta));
+            t.rotate(theta/2);
+            largeThumbs.get(i).setTransform(t);
+            largeThumbs.get(i).draw(0, 0, g);
+            largeThumbs.get(i).setTransform(new AffineTransform());
+        }
     }
     
     /**

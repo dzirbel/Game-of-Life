@@ -370,11 +370,19 @@ public class PatternSelector implements Runnable
         return height;
     }
     
+    /**
+     * Draws the PatternSelector with the given alpha and graphics context.
+     * The drawing is done relative to the top-left corner of the screen.
+     * 
+     * @param alpha - the transparency with which the PatternSelector should be drawn
+     * @param g - the graphics context
+     */
     public void draw(float alpha, Graphics2D g)
     {
         Rectangle toolbarBounds = toolbar.getBounds();
         
-        AcceleratedImage img = new AcceleratedImage((int)(width + cap.getWidth() + toolbar.getArc()/2), getHeight());
+        AcceleratedImage img = new AcceleratedImage(
+                (int)(width + cap.getWidth() + toolbar.getArc()/2), getHeight());
         Graphics2D gImg = (Graphics2D) img.getContents().getGraphics();
         
         if (slidePos > 0)
@@ -405,9 +413,12 @@ public class PatternSelector implements Runnable
         img.draw(toolbarBounds.x - img.getWidth() + toolbar.getArc()/2,
                 toolbarBounds.y - img.getHeight() + toolbarBounds.height, g);
         
-        for (int i = 0; i < folders.size(); i++)
+        if (fadePos > 0)
         {
-            folders.get(i).draw((float)(fadePos*alpha), g);
+            for (int i = 0; i < folders.size(); i++)
+            {
+                folders.get(i).draw((float)(fadePos*alpha), g);
+            }
         }
     }
     
