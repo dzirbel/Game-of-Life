@@ -397,54 +397,74 @@ public class Selection implements Runnable
             {
                 return true;
             }
-            // TODO determine which handle is held by which is closest to the click
-            else if (
-                Math.abs(grid.toPixel(selection.getMinX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getMaxY() - grid.y) - e.getY()) < handleSize)
+            
+            double distUpRight = 
+                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getMinY()    - grid.y) - e.getY(), 2);
+            double distRight = 
+                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getCenterY() - grid.y) - e.getY(), 2);
+            double distDownRight = 
+                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getMaxY()    - grid.y) - e.getY(), 2);
+            double distDown = 
+                    Math.pow(grid.toPixel(selection.getCenterX() - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getMaxY()    - grid.y) - e.getY(), 2);
+            double distDownLeft = 
+                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getMaxY()    - grid.y) - e.getY(), 2);
+            double distLeft = 
+                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getCenterY() - grid.y) - e.getY(), 2);
+            double distUpLeft = 
+                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getMinY()    - grid.y) - e.getY(), 2);
+            double distUp = 
+                    Math.pow(grid.toPixel(selection.getCenterX() - grid.x) - e.getX(), 2) + 
+                    Math.pow(grid.toPixel(selection.getMinY()    - grid.y) - e.getY(), 2);
+            
+            double min = 
+                    Math.min(distUpRight, 
+                    Math.min(distRight, 
+                    Math.min(distDownRight,
+                    Math.min(distDown, 
+                    Math.min(distDownLeft, 
+                    Math.min(distLeft, 
+                    Math.min(distUpLeft, distUp)))))));
+            if (min < Math.pow(handleSize, 2))
             {
-                directionHeld = Direction.DOWN_LEFT;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getMaxX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getMinY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.UP_RIGHT;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getMaxX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getMaxY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.DOWN_RIGHT;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getMinX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getMinY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.UP_LEFT;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getCenterX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getMinY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.UP;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getMaxX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getCenterY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.RIGHT;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getCenterX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getMaxY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.DOWN;
-            }
-            else if (
-                Math.abs(grid.toPixel(selection.getMinX() - grid.x) - e.getX()) < handleSize &&
-                Math.abs(grid.toPixel(selection.getCenterY() - grid.y) - e.getY()) < handleSize)
-            {
-                directionHeld = Direction.LEFT;
+                if (min == distDownRight)
+                {
+                    directionHeld = Direction.DOWN_RIGHT;
+                }
+                else if (min == distUpLeft)
+                {
+                    directionHeld = Direction.UP_LEFT;
+                }
+                else if (min == distUpRight)
+                {
+                    directionHeld = Direction.UP_RIGHT;
+                }
+                else if (min == distDownLeft)
+                {
+                    directionHeld = Direction.DOWN_LEFT;
+                }
+                else if (min == distDown)
+                {
+                    directionHeld = Direction.DOWN;
+                }
+                else if (min == distLeft)
+                {
+                    directionHeld = Direction.LEFT;
+                }
+                else if (min == distUp)
+                {
+                    directionHeld = Direction.UP;
+                }
+                else if (min == distRight)
+                {
+                    directionHeld = Direction.RIGHT;
+                }
             }
             else
             {
