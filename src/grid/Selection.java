@@ -153,7 +153,7 @@ public class Selection implements Runnable
         minimizeTooltip = new Tooltip("Minimize Toolbar", null, theme);
         closeTooltip = new Tooltip("Close Selection", null, theme);
         
-        Listener.requestNotification(this, "keyReleased", Listener.TYPE_KEY_RELEASED);
+        Listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED);
         
         new Thread(this).start();
     }
@@ -330,12 +330,12 @@ public class Selection implements Runnable
     }
     
     /**
-     * Invoked by the listener when a key is released.
+     * Invoked by the listener when a key is pressed.
      * If the control key is held, the event is used to manipulate the selection.
      * 
      * @param e - the triggering event
      */
-    public void keyReleased(KeyEvent e)
+    public void keyPressed(KeyEvent e)
     {
         if (Listener.controlHeld())
         {

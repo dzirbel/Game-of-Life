@@ -66,7 +66,7 @@ public class ControlBar
             ex.printStackTrace();
         }
         
-        Listener.requestNotification(this, "exit", Listener.TYPE_KEY_RELEASED,
+        Listener.requestNotification(this, "exit", Listener.TYPE_KEY_PRESSED,
                 KeyEvent.VK_ESCAPE);
     }
     

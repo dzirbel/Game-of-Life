@@ -388,6 +388,27 @@ public class Grid implements Runnable
         case KeyEvent.VK_MINUS:
             minusHeld = true;
             break;
+        case KeyEvent.VK_V:
+            if (Listener.controlHeld())
+            {
+                pasteClipboard();
+            }
+            break;
+        case KeyEvent.VK_A:
+            if (Listener.controlHeld())
+            {
+                if (Listener.shiftHeld())
+                {
+                    selection.close();
+                }
+                else
+                {
+                    selection.setSelection(new Rectangle((int)Math.ceil(x), (int)Math.ceil(y),
+                            (int)(DisplayMonitor.screen.width/zoom - Math.abs(x - (int)x)),
+                            (int)(DisplayMonitor.screen.height/zoom - Math.abs(y - (int)y))));
+                }
+            }
+            break;
         }
     }
     
@@ -420,27 +441,6 @@ public class Grid implements Runnable
             break;
         case KeyEvent.VK_MINUS:
             minusHeld = false;
-            break;
-        case KeyEvent.VK_V:
-            if (Listener.controlHeld())
-            {
-                pasteClipboard();
-            }
-            break;
-        case KeyEvent.VK_A:
-            if (Listener.controlHeld())
-            {
-                if (Listener.shiftHeld())
-                {
-                    selection.close();
-                }
-                else
-                {
-                    selection.setSelection(new Rectangle((int)Math.ceil(x), (int)Math.ceil(y),
-                            (int)(DisplayMonitor.screen.width/zoom - Math.abs(x - (int)x)),
-                            (int)(DisplayMonitor.screen.height/zoom - Math.abs(y - (int)y))));
-                }
-            }
             break;
         }
     }

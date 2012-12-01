@@ -92,7 +92,7 @@ public class Diagnostics
         lastUpdatedFrameRate = System.nanoTime();
         
         Listener.requestNotification(this, "switchVisibility",
-                Listener.TYPE_KEY_RELEASED, KeyEvent.VK_F3);
+                Listener.TYPE_KEY_PRESSED, KeyEvent.VK_F3);
     }
     
     /**

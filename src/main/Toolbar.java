@@ -143,8 +143,8 @@ public class Toolbar implements Runnable
                 Listener.TYPE_MOUSE_RELEASED, Listener.CODE_BUTTON1);
         Listener.requestNotification(this, "mouseDragged",
                 Listener.TYPE_MOUSE_DRAGGED, Listener.CODE_BUTTON1);
-        Listener.requestNotification(this, "keyReleased",
-                Listener.TYPE_KEY_RELEASED, Listener.CODE_KEY_ALL);
+        Listener.requestNotification(this, "keyPressed",
+                Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
         
         bounds = new Rectangle(DisplayMonitor.screen.width - width - DisplayMonitor.screen.width/20,
                 DisplayMonitor.screen.height - height - DisplayMonitor.screen.height/30,
@@ -375,34 +375,37 @@ public class Toolbar implements Runnable
     }
     
     /**
-     * Invoked when a key is released.
+     * Invoked when a key is pressed.
      * 
      * @param e - the triggering event
      */
-    public void keyReleased(KeyEvent e)
+    public void keyPressed(KeyEvent e)
     {
-        if (e.getKeyCode() == KeyEvent.VK_P && !Listener.controlHeld())
+        if (!Listener.controlHeld())
         {
-            pause();
-            playRO.splash();
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_N && !Listener.controlHeld())
-        {
-            next();
-            nextRO.splash();
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_S && !Listener.controlHeld())
-        {
-            clear();
-            clearRO.splash();
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_COMMA && !Listener.controlHeld())
-        {
-            speedSlider.adjustPosition(-0.1);
-        }
-        else if (e.getKeyCode() == KeyEvent.VK_PERIOD && !Listener.controlHeld())
-        {
-            speedSlider.adjustPosition(0.1);
+            if (e.getKeyCode() == KeyEvent.VK_P)
+            {
+                pause();
+                playRO.splash();
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_N)
+            {
+                next();
+                nextRO.splash();
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_S)
+            {
+                clear();
+                clearRO.splash();
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_COMMA)
+            {
+                speedSlider.adjustPosition(-0.1);
+            }
+            else if (e.getKeyCode() == KeyEvent.VK_PERIOD)
+            {
+                speedSlider.adjustPosition(0.1);
+            }
         }
     }
     
