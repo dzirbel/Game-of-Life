@@ -45,7 +45,7 @@ Longer-term, I am hoping to implement:
 
 ## Installation
 
-The Game of Life is very simple to install and run. Simply downlaod the latest JAR from the repository (https://github.com/zirbinator/Game-of-Life in the "Downloads" tab on the right) and run it. On some Linux/Unix systems, this file may have to be marked as executable bit.
+The Game of Life is very simple to install and run. Simply downlaod the latest JAR from the repository (currently in the root repository since github has removed Downloads) and run it. On some Linux/Unix systems, this file may have to be marked as executable bit.
 
 The only requirement to run the Game of Life is a recent installation of Java (1.5 or later).
 
