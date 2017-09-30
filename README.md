@@ -1,6 +1,6 @@
 # Game of Life
 
-A desktop simulation of John Conway's Game of Life written in Java, created by zirbinator [Dominic Zirbel, zirbinator@gmail.com]. This software is open-source and free to use under the GNU General Public License, Version 3 (http://www.gnu.org/licenses/gpl.html).
+A desktop simulation of John Conway's Game of Life written in Java, created by Dominic Zirbel [djynth@gmail.com]. This software is open-source and free to use under the GNU General Public License, Version 3 (http://www.gnu.org/licenses/gpl.html).
 
 Most graphics are adapted from the "Ultimate Gnome" project, found at: http://code.google.com/p/ultimate-gnome/
 
@@ -30,13 +30,13 @@ The Game of Life currently supports the following features:
 
 ## Future
 
-The Game of Life is currently under development by zirbinator. I plan to add a number of features soon, including:
+The Game of Life is no longer being developed. Planned features included:
 
 * improved pattern interface
 * the ability to save/delete/rename/etc. patterns
 * right-click menus
 
-Longer-term, I am hoping to implement:
+Longer-term, I was hoping to implement:
 
 * Memory: return to the first generation
 * Zombie Cells: cells that are always alive (or dead)
@@ -47,7 +47,7 @@ Longer-term, I am hoping to implement:
 
 The Game of Life is very simple to install and run. Simply downlaod the latest JAR from the repository and run it. On some Linux/Unix systems, this file may have to be marked as executable bit.
 
-(The JAR is in the [root repository folder](http://www.github.com/zirbinator/Game-of-Life) named "Game of Life X.X.XX.jar". To download it, click on it and then select "View Raw". I apologize for this inconvenience; github has recently removed Downloads and I have not yet moved to an external host).
+(The JAR is in the [root repository folder](http://www.github.com/djynth/Game-of-Life) named "Game of Life X.X.XX.jar". To download it, click on it and then select "View Raw". I apologize for this inconvenience; github has recently removed Downloads and I have not yet moved to an external host).
 
 The only requirement to run the Game of Life is a recent installation of Java (1.5 or later).
 
