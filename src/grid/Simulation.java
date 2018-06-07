@@ -6,14 +6,12 @@ import utils.ListUtil;
 
 /**
  * Handles the simulation of {@link Map}s.
- * 
- * @author zirbinator
  */
 public class Simulation
 {
     /**
      * Simulates the next generation for the given Map.
-     * 
+     *
      * @param map - the Map for which to simulate the next generation
      * @return a (sorted) list of the cells in the next generation of the given Map
      */
@@ -27,7 +25,7 @@ public class Simulation
         // how many neighbors each cell being considered for life in the next generation has,
         // parallel with "cells"
         ArrayList<Integer> neighbors = new ArrayList<Integer>();
-        
+
         // Pass I:
         //  Go through all living cells and take note of the neighbors of each cell.
         //  Keep a list of all the cells that are neighbors of living cells (cells ArrayList) and
@@ -62,7 +60,7 @@ public class Simulation
                 }
             }
         }
-        
+
         // Pass 2:
         // Go through all the cells that have been counted as neighbors for and check if they
         //  be alive in the next generation (which depends on whether they were alive in the last
@@ -91,7 +89,7 @@ public class Simulation
                 }
             }
         }
-        
+
         return cells;
     }
 }

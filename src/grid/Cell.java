@@ -6,26 +6,24 @@ import java.awt.Point;
  * Represents a single, living cell in the Game of Life simulation.
  * This class is simply an implementation of the {@link java.awt.Point} superclass that allows for
  *  a natural ordering so that sorted lists can be maintained.
- * 
- * @author zirbinator
  */
 public class Cell extends Point implements Comparable<Cell>
 {
     private static final long serialVersionUID = 1L;
-    
+
     /**
      * Creates a new, empty Cell at (0, 0).
-     * 
+     *
      * @see Point#Point()
      */
     public Cell()
     {
         super();
     }
-    
+
     /**
      * Creates a new Cell at the given coordinates.
-     * 
+     *
      * @param x - the x-coordinate of the Cell
      * @param y - the y-coordinate of the Cell
      * @see Point#Point(int, int)
@@ -34,10 +32,10 @@ public class Cell extends Point implements Comparable<Cell>
     {
         super(x, y);
     }
-    
+
     /**
      * Creates a new Cell at the same location as the given Cell.
-     * 
+     *
      * @param c - the cell to be copied into this cell
      * @see Point#Point(Point)
      */
@@ -45,7 +43,7 @@ public class Cell extends Point implements Comparable<Cell>
     {
         super(c);
     }
-    
+
     /**
      * Compares this Cell to the given Cell.
      * Cells are ordered based primarily on the x-coordinates and secondarily on y-coordinates.
@@ -57,7 +55,7 @@ public class Cell extends Point implements Comparable<Cell>
      *  similar manner: if the y-coordinate of one Cell is larger than that of another, it is
      *  larger than the other Cell and if its y-coordinate is smaller, it is smaller.
      * Two cells are equivalent if and only if both the x- and y-coordinates are equal.
-     * 
+     *
      * @param o - the Cell to which to compare
      * @return a comparison, {@code -1} if o is less than this cell,
      *  {@code 1} if o is greater than this cell,
@@ -90,12 +88,12 @@ public class Cell extends Point implements Comparable<Cell>
             }
         }
     }
-    
+
     /**
      * Determines whether this Cell equals the given object.
      * The two are equal if and only if the given Object is a Cell and its x- and y-coordinates are
      *  both equal to this Cell's x- and y-coordinates.
-     * 
+     *
      * @param o - the object to which to compare
      * @return true if the given object is equal to this Cell, false otherwise
      * @see Point#equals(Object)
@@ -108,11 +106,11 @@ public class Cell extends Point implements Comparable<Cell>
         }
         return false;
     }
-    
+
     /**
      * Returns a clone of this Cell with the same coordinates.
      * This is equivalent to using the {@link #Cell(Cell)} constructor with this as the parameter.
-     * 
+     *
      * @return a cloned version of this Cell
      * @see java.awt.geom.Point2D#clone()
      * @see Cell#Cell(Cell)
@@ -121,13 +119,13 @@ public class Cell extends Point implements Comparable<Cell>
     {
         return new Cell(this);
     }
-    
+
     /**
      * Returns a String representation of this Cell with the format:
      * <pre>
      * x,y
      * </pre>
-     * 
+     *
      * @return a user-friendly String representation of this Cell
      * @see Point#toString()
      */

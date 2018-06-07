@@ -14,13 +14,11 @@ import grid.Grid;
  * Patterns have a full name, which is typically displayed in a tooltip, and a short name, which
  *  is shown on the screen, where space may be limited.
  * The pattern acts a non-writeable holder for the full name, short name, and pattern array.
- * 
- * @author zirbinator
  */
 public class Pattern implements Comparable<Pattern>
 {
     private static AcceleratedImage alive;
-    
+
     /**
      * Holds the pattern's data.
      * Each cell is a single element of the array; true is customarily used for living cells and
@@ -35,15 +33,15 @@ public class Pattern implements Comparable<Pattern>
      *     }
      * }
      * </pre>
-     * That is, the first array indices are typically the "x" coordinates of the pattern and the 
+     * That is, the first array indices are typically the "x" coordinates of the pattern and the
      *  second indices are the "y" coordinates.
      * {@link #getWidth()} and {@link #getHeight()} can also be used to find the width and height
      *  of the pattern, as opposed to {@code pattern.length} and {@code pattern[0].length}.
      */
     public final boolean[][] pattern;
-    
+
     private static final Color thumbBackground = Color.black;
-    
+
     /**
      * The full name of this Pattern.
      * This name is typically displayed as a tooltip.
@@ -54,15 +52,15 @@ public class Pattern implements Comparable<Pattern>
      * This name is typically displayed on the screen, since space may be limited.
      */
     public final String shortName;
-    
+
     static
     {
         alive = ImageLoader.load("alive");
     }
-    
+
     /**
      * Creates a new Pattern with the given map and names.
-     * 
+     *
      * @param pattern - the pattern held by this Pattern
      * @param fullName - the full name of the Pattern
      * @param shortName - and abbreviated name for this Pattern
@@ -73,11 +71,11 @@ public class Pattern implements Comparable<Pattern>
         this.fullName = fullName;
         this.shortName = shortName;
     }
-    
+
     /**
      * Creates a new Pattern with the given map and name.
      * The {@link #shortName} and {@link #fullName} are both set to the given name.
-     * 
+     *
      * @param pattern - the pattern held by this Pattern
      * @param name - the name of this Pattern
      */
@@ -85,21 +83,21 @@ public class Pattern implements Comparable<Pattern>
     {
         this(pattern, name, name);
     }
-    
+
     /**
      * Gets the width of this Pattern, equal to {@code pattern.length}.
-     * 
+     *
      * @return the width of this Pattern, in cells
      */
     public int getWidth()
     {
         return pattern.length;
     }
-    
+
     /**
      * Gets the height of this Pattern, equal to {@code pattern[0].length} (or 0 if
      *  {@code pattern.length} is 0).
-     * 
+     *
      * @return the height of this Pattern, in cells.
      */
     public int getHeight()
@@ -108,13 +106,13 @@ public class Pattern implements Comparable<Pattern>
         {
             return 0;
         }
-        
+
         return pattern[0].length;
     }
-    
+
     /**
      * Generates a thumbnail image of this Pattern with the given size.
-     * 
+     *
      * @param width - the width of the desired image, in pixels
      * @param height - the height of the desired image, in pixels
      * @return an AcceleratedImage of the requested size which visually depicts this Pattern
@@ -123,10 +121,10 @@ public class Pattern implements Comparable<Pattern>
     {
         AcceleratedImage thumb = new AcceleratedImage(width, height);
         Graphics2D g = (Graphics2D) thumb.getContents().getGraphics();
-        
+
         g.setColor(thumbBackground);
         g.fillRect(0, 0, width, height);
-        
+
         // the size of a single cell in the thumb
         double cellSize = Math.min((double)width/getWidth(), (double)height/getHeight());
         // scale the alive image
@@ -148,15 +146,15 @@ public class Pattern implements Comparable<Pattern>
                 }
             }
         }
-        
+
         return thumb;
     }
-    
+
     /**
      * Determines whether this Pattern is equal to the given Object.
      * They are equal if any only if the given Object is a pattern with identical full names, short
      *  names, and patterns.
-     * 
+     *
      * @param o - the object to which to compare this Pattern
      * @return true if this Pattern equals the given Object, false otherwise
      * @see Object#equals(Object)
@@ -171,7 +169,7 @@ public class Pattern implements Comparable<Pattern>
         }
         return false;
     }
-    
+
     /**
      * Returns a String representation of this Pattern, with the format:
      * <pre>
@@ -181,14 +179,14 @@ public class Pattern implements Comparable<Pattern>
      * 10101010101
      * 01010101010
      * </pre>
-     * 
+     *
      * @return a user-friendly String representation of this Pattern
      * @see Object#toString()
      */
     public String toString()
     {
         String str = fullName + " [" + shortName + "]:\n";
-        
+
         for (int y = 0; y < getHeight(); y++)
         {
             for (int x = 0; x < getWidth(); x++)
@@ -197,13 +195,13 @@ public class Pattern implements Comparable<Pattern>
             }
             str += "\n";
         }
-        
+
         return str;
     }
-    
+
     /**
      * Compares this Pattern to the given one, based on the full names of each Pattern.
-     * 
+     *
      * @param p - the Pattern to which to compare
      * @return a comparison
      * @see Comparable#compareTo(Object)

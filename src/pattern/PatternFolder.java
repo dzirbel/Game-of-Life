@@ -25,8 +25,6 @@ import main.GameOfLife;
  * Each PatternFolder holds a list of {@link Pattern}s and a name associated with the folder,
  *  and is primarily responsible for drawing a visual pattern and allowing the user to select
  *  patterns via mouse input, in conjunction with a {@link PatternSelector}.
- * 
- * @author zirbinator
  */
 public class PatternFolder implements Runnable
 {
@@ -35,19 +33,19 @@ public class PatternFolder implements Runnable
     private ArrayList<Pattern> patterns;
     private ArrayList<AcceleratedImage> thumbs;
     private ArrayList<AcceleratedImage> largeThumbs;
-    
+
     private boolean on;
     /**
      * Whether the user is currently hovering the mouse over the folder image.
      */
     private boolean hoveringFolder;
-    
+
     private static final Color nameColor = new Color(0, 163, 231);
     private static final Color nameShadowColor = Color.black;
     private static final Color patternNameColor = new Color(10, 10, 10);
     private static final Color patternBoxBorder = new Color(12, 12, 12);
     private static final Color patternBoxBackground = new Color(50, 50, 50);
-    
+
     private Dimension size;
     /**
      * The amount that the PatternFolder is open, in the range [0, 1], where 0 is entirely closed
@@ -60,12 +58,12 @@ public class PatternFolder implements Runnable
      */
     private double folderOpenAmount;
     private static final double maxFolderOpenAmount = 0.2;
-    
+
     private FolderState state;
     private static final Font nameFont = new Font(Font.SANS_SERIF, Font.ITALIC, 14);
     private static final Font patternNameFont = new Font(Font.SANS_SERIF, Font.PLAIN, 11);
     private static final Metrics nameMetrics = new Metrics(nameFont);
-    
+
     /**
      * The width of the entire PatternFolder depiction, in pixels.
      */
@@ -103,13 +101,13 @@ public class PatternFolder implements Runnable
      * The size of each thumbnail shown in the folder depiction, in pixels.
      */
     private static final int largeThumbSize = 28;
-    
+
     private static final long period = 15;
     /**
      * The time it takes to go from completely closed to completely open, in milliseconds
      */
     private static final long openTime = 100;
-    
+
     private PatternSelector selector;
     /**
      * The location of the PatternFolder depiction on the screen, in pixels.
@@ -140,16 +138,16 @@ public class PatternFolder implements Runnable
      *  is the positive distance from the bottom of the depiction.
      */
     private static final Point openFolderLocation = new Point(0, closedFolderLocation.y);
-    
+
     /**
      * The name of this PatternFolder.
      */
     private String name;
-    
+
     /**
      * Creates a new PatternFolder with the given name and patterns.
      * The folder is closed by default.
-     * 
+     *
      * @param name - the name of this PatternFolder
      * @param patterns - the Patterns held by this PatternFolder
      */
@@ -158,7 +156,7 @@ public class PatternFolder implements Runnable
         this.selector = selector;
         setName(name);
         setPatterns(patterns);
-        
+
         on = false;
         hoveringFolder = false;
         state = FolderState.CLOSED;
@@ -167,21 +165,21 @@ public class PatternFolder implements Runnable
         selected = -1;
         folderLocation = new Point(closedFolderLocation);
         size = new Dimension(width, closedHeight);
-        
+
         folderBack = ImageLoader.load("folder_back");
         folderFront = ImageLoader.load("folder_front");
         folderBack.resize(folderSize, folderSize);
         folderFront.resize(folderSize, folderSize);
-        
+
         Listener.requestNotification(this, "mouseMoved", Listener.TYPE_MOUSE_MOVED);
         Listener.requestNotification(this, "mousePressed", Listener.TYPE_MOUSE_PRESSED);
-        
+
         new Thread(this).start();
     }
-    
+
     /**
      * Runs this PatternFolder in a separate thread.
-     * 
+     *
      * @see Runnable#run()
      */
     public void run()
@@ -190,11 +188,11 @@ public class PatternFolder implements Runnable
         while (true)
         {
             elapsed = (System.nanoTime() - lastUpdate)/1000000;
-            
+
             if (state == FolderState.OPENING)
             {
                 openAmount += (double)elapsed/openTime;
-                
+
                 if (openAmount >= 1)
                 {
                     openAmount = 1;
@@ -205,7 +203,7 @@ public class PatternFolder implements Runnable
             else if (state == FolderState.CLOSING)
             {
                 openAmount -= (double)elapsed/openTime;
-                
+
                 if (openAmount <= 0)
                 {
                     openAmount = 0;
@@ -214,7 +212,7 @@ public class PatternFolder implements Runnable
                 }
             }
             folderLocation.x = (int) (openAmount*openFolderLocation.x + (1 - openAmount)*closedFolderLocation.x);
-            
+
             if (hoveringFolder || state == FolderState.OPEN || state == FolderState.OPENING)
             {
                 folderOpenAmount = maxFolderOpenAmount;
@@ -223,7 +221,7 @@ public class PatternFolder implements Runnable
             {
                 folderOpenAmount = 0;
             }
-            
+
             lastUpdate = System.nanoTime();
             try
             {
@@ -235,11 +233,11 @@ public class PatternFolder implements Runnable
             }
         }
     }
-    
+
     /**
      * Gets the name of this PatternFolder, typically used as a generic categorization of its
      *  patterns and displayed along with the folder.
-     * 
+     *
      * @return the name of this PatternFolder
      * @see #setName(String)
      */
@@ -247,11 +245,11 @@ public class PatternFolder implements Runnable
     {
         return name;
     }
-    
+
     /**
      * Sets the name of this PatternFolder, typically used as a generic categorization of its
      *  patterns and displayed along with the folder.
-     * 
+     *
      * @param name - the new name of this PatternFolder
      * @see #getName()
      */
@@ -260,12 +258,12 @@ public class PatternFolder implements Runnable
         this.name = name;
         nameLocation = null;
     }
-    
+
     /**
      * Sets the patterns held by this PatternFolder.
      * Note that this should be done sparingly, as it is necessary to sort them and generate
      *  thumbnail images for each pattern, which can be time-consuming.
-     * 
+     *
      * @param patterns - the patterns to be held by this PatternFolder
      */
     public void setPatterns(ArrayList<Pattern> patterns)
@@ -282,11 +280,11 @@ public class PatternFolder implements Runnable
         openHeight = Math.max(closedHeight,
                 bottomBuffer + this.patterns.size()*patternHeight + topBuffer);
     }
-    
+
     /**
      * Determines whether this PatternFolder is currently in the "on" state, signifying that it
      *  will respond to input.
-     * 
+     *
      * @return true if this PatternFolder is reacting to user input, false otherwise
      * @see #setOn(boolean)
      */
@@ -294,11 +292,11 @@ public class PatternFolder implements Runnable
     {
         return on;
     }
-    
+
     /**
      * Sets the "on" state of this PatternFolder, used to signify whether it should respond to user
      *  input.
-     * 
+     *
      * @param on - true if this PatternFolder is currently visible on the screen and should be
      *  reacting to user input, false otherwise
      * @see #isOn()
@@ -307,20 +305,20 @@ public class PatternFolder implements Runnable
     {
         this.on = on;
     }
-    
+
     /**
      * Gets the current size of this PatternFolder.
-     * 
+     *
      * @return the size of the PatternFolder, in pixels
      */
     public Dimension getSize()
     {
         return (Dimension) size.clone();
     }
-    
+
     /**
      * Gets the location of this PatternFolder on the screen.
-     * 
+     *
      * @return the current location of this PatternFolder on the screen, in pixels
      * @see #setLocation(Point)
      */
@@ -328,10 +326,10 @@ public class PatternFolder implements Runnable
     {
         return new Point(location);
     }
-    
+
     /**
      * Sets the location of this PatternFolder on the screen.
-     * 
+     *
      * @param location - the location of this PatternFolder on the screen, in pixels
      * @see #getLocation()
      */
@@ -339,10 +337,10 @@ public class PatternFolder implements Runnable
     {
         this.location = new Point(location);
     }
-    
+
     /**
      * Gets the area in which the folder should be shown on the screen.
-     * 
+     *
      * @return the area of the screen which should contain the folder image
      */
     private Rectangle getFolderArea()
@@ -351,13 +349,13 @@ public class PatternFolder implements Runnable
                 location.y + size.height - folderLocation.y,
                 folderSize, folderSize);
     }
-    
+
     /**
      * Gets the box in which the pattern at the given index should be displayed.
      * This box is relative to location rather than the screen in general; thus, for example, if
      *  checking whether the mouse is hovering over a certain box, the x- and y-coordinate of the
      *  box must be incremented by location.
-     * 
+     *
      * @param patternIndex - the index of the pattern for which to find the box
      * @return the box in which the pattern should be shown
      */
@@ -367,7 +365,7 @@ public class PatternFolder implements Runnable
                 size.height - bottomBuffer - (patternIndex + 1)*patternHeight,
                 size.width - (openFolderLocation.x + folderSize), patternHeight);
     }
-    
+
     /**
      * Finds the current size of this PatternFolder.
      * The size is only affected by the state, and so this should be called whenever the state is
@@ -383,24 +381,24 @@ public class PatternFolder implements Runnable
         {
             size = new Dimension(width, openHeight);
         }
-        
+
         selector.onResize();
-        
+
         synchronized (nameLocation)
         {
             nameLocation = null;
         }
     }
-    
+
     /**
      * Invoked when the mouse is moved.
-     * 
+     *
      * @param e - the triggering event
      */
     public synchronized void mouseMoved(MouseEvent e)
     {
         hoveringFolder = on && getFolderArea().contains(e.getLocationOnScreen());
-        
+
         selected = -1;
         if (state == FolderState.OPEN)
         {
@@ -416,10 +414,10 @@ public class PatternFolder implements Runnable
             }
         }
     }
-    
+
     /**
      * Invoked when the mouse is pressed.
-     * 
+     *
      * @param e - the triggering event
      */
     public synchronized void mousePressed(MouseEvent e)
@@ -437,17 +435,17 @@ public class PatternFolder implements Runnable
                 findSize();
             }
         }
-        
+
         if (on && selected != -1)
         {
             GameOfLife.getGrid().setSelectedPattern(patterns.get(selected));
         }
     }
-    
+
     /**
      * Draws this PatternFolder.
      * The PatternFolder is drawn relative to the screen.
-     * 
+     *
      * @param alpha - the transparency with which the PatternFolder should be drawn
      * @param g - the graphics context
      */
@@ -455,7 +453,7 @@ public class PatternFolder implements Runnable
     {
         AcceleratedImage img = new AcceleratedImage(size.width, size.height);
         Graphics2D gImg = (Graphics2D) img.getContents().getGraphics();
-        
+
         if (nameLocation == null)
         {
             nameLocation = new Point((int) (size.width - nameMetrics.getStringBounds(name, gImg).getWidth() - 15),
@@ -471,12 +469,12 @@ public class PatternFolder implements Runnable
             gImg.drawString(name, nameLocation.x, nameLocation.y);
             gImg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
         }
-        
+
         folderBack.draw(folderLocation.x, size.height - folderLocation.y, gImg);
         drawThumbnails(gImg);
         folderFront.setScale(1 - folderOpenAmount, 1);
         folderFront.draw(folderLocation.x, size.height - folderLocation.y, gImg);
-        
+
         if (state != FolderState.CLOSED)
         {
             AcceleratedImage patternsImg = new AcceleratedImage(
@@ -485,25 +483,25 @@ public class PatternFolder implements Runnable
             AffineTransform t = new AffineTransform();
             t.setToTranslation(-openFolderLocation.x - folderSize, -size.height + bottomBuffer + patterns.size()*patternHeight);
             gPatterns.setTransform(t);
-            
+
             for (int i = 0; i < patterns.size(); i++)
             {
                 drawPatternBox(i, gPatterns);
             }
-            
+
             patternsImg.setTransparency((float) openAmount);
             patternsImg.draw(openFolderLocation.x + folderSize,
                     size.height - bottomBuffer - (patterns.size())*patternHeight, gImg);
         }
-        
+
         img.setTransparency(alpha);
         img.draw(location.x, location.y, g);
     }
-    
+
     /**
      * Draws the box giving information regarding the pattern at the given index.
      * The drawing is done relative to location, as given by {@link #getPatternBox(int)}.
-     * 
+     *
      * @param patternIndex - the index of the pattern to depict
      * @param g - the graphics context
      * @see #getPatternBox(int)
@@ -515,29 +513,29 @@ public class PatternFolder implements Runnable
         g.fillRect(box.x, box.y, box.width, box.height);
         g.setColor(patternBoxBackground);
         g.fillRect(box.x + 1, box.y + 1, box.width - 2, box.height - 2);
-        
+
         thumbs.get(patternIndex).draw(box.x + 1, box.y + 1, g);
-        
+
         if (selected == patternIndex)
         {
             g.setColor(new Color(0, 163, 231));
             g.drawRect(box.x + box.height, box.y + 2, box.width - box.height - 3, box.height - 5);
         }
-        
+
         g.setColor(patternNameColor);
         g.setFont(patternNameFont);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.drawString(patterns.get(patternIndex).shortName, box.x + box.height + 3, box.y + box.height - 5);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
     }
-    
+
     /**
      * Draws the pattern thumbnails into the folder depiction.
      * This should be called after drawing the back of the folder and before drawing the front.
      * The drawing is done relative to the top-left of the PatternFolder's location rather to the
      *  screen, and so either an image graphics context should be used or a screen context must be
      *  translated prior to calling this function.
-     * 
+     *
      * @param g - the graphics context
      */
     private void drawThumbnails(Graphics2D g)
@@ -546,10 +544,10 @@ public class PatternFolder implements Runnable
         {
             return;
         }
-        
+
         final double thetaShift = -Math.PI/8;
         final double radius = folderSize/2.0;
-        
+
         double thetaVariation = Math.min(Math.PI*largeThumbs.size()/20, Math.PI/4);
         double theta;
         for (int i = 0; i < largeThumbs.size(); i++)
@@ -564,11 +562,9 @@ public class PatternFolder implements Runnable
             largeThumbs.get(i).setTransform(new AffineTransform());
         }
     }
-    
+
     /**
      * A trivial implementation of {@link FontMetrics} to provide its capabilities.
-     * 
-     * @author zirbinator
      */
     private static class Metrics extends FontMetrics
     {
@@ -579,11 +575,9 @@ public class PatternFolder implements Runnable
             super(f);
         }
     }
-    
+
     /**
      * Represents the state of a PatternFolder.
-     * 
-     * @author zirbinator
      */
     private static enum FolderState
     {

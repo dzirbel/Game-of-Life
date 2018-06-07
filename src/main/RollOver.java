@@ -14,30 +14,28 @@ import java.awt.Rectangle;
  * Additionally, it can be "splashed" - faded in and out quickly, as when the icon is activated
  *  without the user of the mouse (for example, if a key is pressed that does the same action as
  *  clicking the icon).
- * 
- * @author zirbinator
  */
 public class RollOver implements Runnable
 {
     private AcceleratedImage selection;
-    
+
     private float alpha;
-    
+
     private int buffer;
-    
+
     private static final long period = 25;
     /**
      * The time to completely fade in or out (i.e. from alpha of 0 to 1) in milliseconds.
      */
     private static final long fadeTime = 350;
-    
+
     private Rectangle bounds;
-    
+
     private SplashState splashing;
-    
+
     /**
      * Creates a new RollOver with the given boundaries.
-     * 
+     *
      * @param bounds - the area of the screen which activates the RollOver when it is hovered over
      *  by the cursor
      */
@@ -47,27 +45,27 @@ public class RollOver implements Runnable
         selection = ImageLoader.load("rollover");
         alpha = 0;
         splashing = SplashState.NO_SPLASH;
-        
+
         setBounds(bounds);
-        
+
         new Thread(this).start();
     }
-    
+
     /**
      * Gets the boundaries of this RollOver: the area of the screen which activates the RollOver
      *  when it is hovered over by the cursor.
-     * 
+     *
      * @return a cloned version of the boundaries of this RollOver
      */
     public Rectangle getBounds()
     {
         return (Rectangle) bounds.clone();
     }
-    
+
     /**
      * Sets the boundaries of this RollOver: the area of the screen which activates the RollOver
      *  when it is hovered over by the cursor.
-     * 
+     *
      * @param bounds - the new boundaries for this RollOver
      */
     public void setBounds(Rectangle bounds)
@@ -80,12 +78,12 @@ public class RollOver implements Runnable
                     (double)this.bounds.height/selection.getHeight());
         }
     }
-    
+
     /**
      * Runs this RollOver in its own Thread.
      * The RollOver continually updates its transparency based on the splashing state and mouse
      *  position.
-     * 
+     *
      * @see Runnable#run()
      */
     public void run()
@@ -124,7 +122,7 @@ public class RollOver implements Runnable
                     splashing = SplashState.NO_SPLASH;
                 }
             }
-            
+
             lastUpdate = System.nanoTime();
             try
             {
@@ -135,7 +133,7 @@ public class RollOver implements Runnable
             }
         }
     }
-    
+
     /**
      * Splashes this RollOver, causing it to fade entirely in and then entirely out, ignoring the
      *  cursor.
@@ -144,10 +142,10 @@ public class RollOver implements Runnable
     {
         splashing = SplashState.SPLASH_IN;
     }
-    
+
     /**
      * Draws this RollOver onto the given graphics context at the position of its boundaries.
-     * 
+     *
      * @param g - the graphics context
      */
     public void draw(Graphics2D g)
@@ -158,11 +156,9 @@ public class RollOver implements Runnable
             selection.draw(bounds.x, bounds.y, g);
         }
     }
-    
+
     /**
      * Defines the splashing state of a RollOver.
-     * 
-     * @author zirbinator
      */
     private enum SplashState
     {

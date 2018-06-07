@@ -27,8 +27,6 @@ import java.awt.geom.RoundRectangle2D;
  *  by dragging the mouse.
  * A selection keeps track of the area selected and also contains a toolbar shown to the right of
  *  the selection which allows the user to manipulate the selection.
- * 
- * @author zirbinator
  */
 public class Selection implements Runnable
 {
@@ -42,7 +40,7 @@ public class Selection implements Runnable
     private static AcceleratedImage slideInImg;
     private static AcceleratedImage slideOutImg;
     private static AcceleratedImage closeImg;
-    
+
     private static boolean imagesLoaded = false;
     private boolean selecting;
     private boolean created;
@@ -55,22 +53,22 @@ public class Selection implements Runnable
     private ButtonListener circle;
     private ButtonListener minimize;
     private ButtonListener close;
-    
+
     private static final Color selectionBorderColor = Color.black;
     private static final Color selectionColor = new Color(219, 198, 35);
-    
+
     private Direction directionHeld;
     private double toolbarPos;
-    
+
     private Grid grid;
-    
+
     private static final int handleSize = 20;
     private static final int toolbarWidth = 295;
     private static final int toolbarHeight = 55;
     private static final int minToolbarPos = 35;
-    
+
     private static final long toolbarSlideTime = 175;
-    
+
     private Rectangle2D selection;
     private Point dragOrigin;
     private static final Rectangle savePos      = new Rectangle(10,  10, 35, 35);
@@ -82,7 +80,7 @@ public class Selection implements Runnable
     private static final Rectangle circlePos    = new Rectangle(235, 30, 15, 15);
     private static final Rectangle minimizePos  = new Rectangle(270, 10, 15, 15);
     private static final Rectangle closePos     = new Rectangle(270, 30, 15, 15);
-    
+
     private ToolbarState toolbarState;
     private Tooltip saveTooltip;
     private Tooltip copyTooltip;
@@ -93,10 +91,10 @@ public class Selection implements Runnable
     private Tooltip circleTooltip;
     private Tooltip minimizeTooltip;
     private Tooltip closeTooltip;
-    
+
     /**
      * Creates a new Selection on top of the given {@link Grid}.
-     * 
+     *
      * @param grid - the Grid object of which this Selection would select cells
      */
     public Selection(Grid grid)
@@ -108,7 +106,7 @@ public class Selection implements Runnable
         directionHeld = Direction.NONE;
         toolbarPos = 0;
         toolbarState = ToolbarState.IN;
-        
+
         if (!imagesLoaded)
         {
             saveImg = ImageLoader.load("save");
@@ -121,10 +119,10 @@ public class Selection implements Runnable
             slideInImg = ImageLoader.load("slide_in");
             slideOutImg = ImageLoader.load("slide_out");
             closeImg = ImageLoader.load("close_small");
-            
+
             imagesLoaded = true;
         }
-        
+
         try
         {
             save      = new ButtonListener(null, "save",      this);
@@ -141,7 +139,7 @@ public class Selection implements Runnable
         {
             ex.printStackTrace();
         }
-        
+
         TooltipTheme theme = new TooltipTheme();
         saveTooltip = new Tooltip("Save as a Pattern [^S]", null, theme);
         copyTooltip = new Tooltip("Copy [^C]", null, theme);
@@ -152,15 +150,15 @@ public class Selection implements Runnable
         circleTooltip = new Tooltip("Create Oval", null, theme);
         minimizeTooltip = new Tooltip("Minimize Toolbar", null, theme);
         closeTooltip = new Tooltip("Close Selection", null, theme);
-        
+
         Listener.requestNotification(this, "keyPressed", Listener.TYPE_KEY_PRESSED);
-        
+
         new Thread(this).start();
     }
-    
+
     /**
      * Runs the Selection in its own thread by constantly updating the toolbar.
-     * 
+     *
      * @see Runnable#run()
      */
     public void run()
@@ -178,7 +176,7 @@ public class Selection implements Runnable
                     {
                         toolbarPos = (double)minToolbarPos/toolbarWidth;
                         toolbarState = ToolbarState.IN;
-                        
+
                         save.setOn(false);
                         copy.setOn(false);
                         rotateCW.setOn(false);
@@ -195,7 +193,7 @@ public class Selection implements Runnable
                     {
                         toolbarPos = 1;
                         toolbarState = ToolbarState.OUT;
-                        
+
                         save.setOn(true);
                         copy.setOn(true);
                         rotateCW.setOn(true);
@@ -206,11 +204,11 @@ public class Selection implements Runnable
                     }
                 }
             }
-            
+
             try
             {
                 Rectangle toolbar = getToolbar();
-                
+
                 save.setButton(new Rectangle(
                         toolbar.x + savePos.x - toolbarWidth + toolbar.width,
                         toolbar.y + savePos.y, savePos.width, savePos.height));
@@ -238,7 +236,7 @@ public class Selection implements Runnable
                 close.setButton(new Rectangle(
                         toolbar.x + closePos.x - toolbarWidth + toolbar.width,
                         toolbar.y + closePos.y, closePos.width, closePos.height));
-                
+
                 saveTooltip.setHoverArea(save.getButton());
                 copyTooltip.setHoverArea(copy.getButton());
                 rotateCWTooltip.setHoverArea(rotateCW.getButton());
@@ -250,7 +248,7 @@ public class Selection implements Runnable
                 closeTooltip.setHoverArea(close.getButton());
             }
             catch (NullPointerException ex) { }
-            
+
             lastUpdate = System.nanoTime();
             try
             {
@@ -259,10 +257,10 @@ public class Selection implements Runnable
             catch (InterruptedException ex) { }
         }
     }
-    
+
     /**
      * Gets the area of the {@link Grid} currently selected.
-     * 
+     *
      * @return the selected area, in cell coordinates
      */
     public Rectangle getSelected()
@@ -273,11 +271,11 @@ public class Selection implements Runnable
                 (int)Math.abs(selection.getMaxX() - selection.getMinX()),
                 (int)Math.abs(selection.getMaxY() - selection.getMinY()));
     }
-    
+
     /**
      * Sets the currently selected area.
      * Note that no bound-checking, etc. is done with the given area.
-     * 
+     *
      * @param selection - the area of the grid to be selected by this Selection
      */
     public void setSelection(Rectangle selection)
@@ -290,19 +288,19 @@ public class Selection implements Runnable
         {
             this.selection = new Rectangle(selection);
         }
-        
-        
+
+
         if (!created)
         {
             toolbarState = ToolbarState.MOVING_OUT;
         }
-        
+
         created = true;
     }
-    
+
     /**
      * Gets the location of the current selection on the screen.
-     * 
+     *
      * @return the location of the selection, in pixels
      */
     private Rectangle2D getSelectionOnScreen()
@@ -313,26 +311,26 @@ public class Selection implements Runnable
                 Math.max(1, grid.toPixel(Math.abs(selection.getMaxX() - selection.getMinX()))),
                 Math.max(1, grid.toPixel(Math.abs(selection.getMaxY() - selection.getMinY()))));
     }
-    
+
     /**
      * Gets the current location of the toolbar on the screen.
-     * The toolbar 
-     * 
+     * The toolbar
+     *
      * @return the location of the toolbar, in pixels
      */
     private Rectangle getToolbar()
     {
         int yShift = (int) (15*grid.zoom/35);
         Rectangle2D selection = getSelectionOnScreen();
-        
+
         return new Rectangle( (int)selection.getMaxX(), (int)selection.getY() + yShift,
                 (int)(toolbarWidth - toolbarWidth*(1 - toolbarPos)), toolbarHeight);
     }
-    
+
     /**
      * Invoked by the listener when a key is pressed.
      * If the control key is held, the event is used to manipulate the selection.
-     * 
+     *
      * @param e - the triggering event
      */
     public void keyPressed(KeyEvent e)
@@ -368,13 +366,13 @@ public class Selection implements Runnable
             }
         }
     }
-    
+
     /**
      * This method should be invoked by the containing {@link Grid} when any mouse event
      *  occurs (and the event has not been consumed).
      * The {@link Grid} should not handle the event (i.e. should not place/remove cells) if this
      *  method returns true.
-     * 
+     *
      * @param e - the triggering event
      * @return true if the event has been used by the Selection and should not be used by the
      *  {@link Grid}, false otherwise
@@ -397,39 +395,39 @@ public class Selection implements Runnable
             {
                 return true;
             }
-            
-            double distUpRight = 
-                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) + 
+
+            double distUpRight =
+                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getMinY()    - grid.y) - e.getY(), 2);
-            double distRight = 
-                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) + 
+            double distRight =
+                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getCenterY() - grid.y) - e.getY(), 2);
-            double distDownRight = 
-                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) + 
+            double distDownRight =
+                    Math.pow(grid.toPixel(selection.getMaxX()    - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getMaxY()    - grid.y) - e.getY(), 2);
-            double distDown = 
-                    Math.pow(grid.toPixel(selection.getCenterX() - grid.x) - e.getX(), 2) + 
+            double distDown =
+                    Math.pow(grid.toPixel(selection.getCenterX() - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getMaxY()    - grid.y) - e.getY(), 2);
-            double distDownLeft = 
-                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) + 
+            double distDownLeft =
+                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getMaxY()    - grid.y) - e.getY(), 2);
-            double distLeft = 
-                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) + 
+            double distLeft =
+                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getCenterY() - grid.y) - e.getY(), 2);
-            double distUpLeft = 
-                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) + 
+            double distUpLeft =
+                    Math.pow(grid.toPixel(selection.getMinX()    - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getMinY()    - grid.y) - e.getY(), 2);
-            double distUp = 
-                    Math.pow(grid.toPixel(selection.getCenterX() - grid.x) - e.getX(), 2) + 
+            double distUp =
+                    Math.pow(grid.toPixel(selection.getCenterX() - grid.x) - e.getX(), 2) +
                     Math.pow(grid.toPixel(selection.getMinY()    - grid.y) - e.getY(), 2);
-            
-            double min = 
-                    Math.min(distUpRight, 
-                    Math.min(distRight, 
+
+            double min =
+                    Math.min(distUpRight,
+                    Math.min(distRight,
                     Math.min(distDownRight,
-                    Math.min(distDown, 
-                    Math.min(distDownLeft, 
-                    Math.min(distLeft, 
+                    Math.min(distDown,
+                    Math.min(distDownLeft,
+                    Math.min(distLeft,
                     Math.min(distUpLeft, distUp)))))));
             if (min < Math.pow(handleSize, 2))
             {
@@ -475,12 +473,12 @@ public class Selection implements Runnable
         }
         return false;
     }
-    
+
     /**
      * This method should be invoked by the containing {@link Grid} whenever the mouse is released
      *  (and the event has not been consumed).
      * The selection area is rounded so that partial cells are no longer selected.
-     * 
+     *
      * @param e - the triggering event
      */
     public synchronized void mouseReleased(MouseEvent e)
@@ -491,17 +489,17 @@ public class Selection implements Runnable
             int right = (int)Math.round(selection.getMaxX());
             int top = (int)Math.round(selection.getMinY());
             int bottom = (int)Math.round(selection.getMaxY());
-            
+
             setSelection(new Rectangle(left, top, right - left, bottom - top));
             selecting = false;
         }
         directionHeld = Direction.NONE;
     }
-    
+
     /**
      * This method should be invoked by the containing {@link Grid} whenever the mouse is dragged
      *  and the {@link Grid} is not handling it (by creating/removing cells).
-     * 
+     *
      * @param e - the triggering event
      */
     public synchronized void mouseDragged(MouseEvent e)
@@ -578,7 +576,7 @@ public class Selection implements Runnable
             dragOrigin = e.getLocationOnScreen();
         }
     }
-    
+
     /**
      * Invoked when the save button is pressed or ctrl-S is released.
      * Saves the Selection as a pattern.
@@ -586,25 +584,25 @@ public class Selection implements Runnable
      */
     public void save()
     {
-        
+
     }
-    
+
     /**
      * Invoked when the copy button is pressed or ctrl-C is released.
      * Copies the contents of this Selection onto the clipboard of the {@link Grid}.
-     * 
+     *
      * @see Grid#copy(Rectangle)
      */
     public void copy()
     {
         grid.copy(getSelected());
     }
-    
+
     /**
      * Invoked when ctrl-X is released.
      * Cuts the contents of this Selection onto the clipboard of the {@link Grid}.
      * This is equivalent to calling {@link #copy()} and {@link #clear()} in succession.
-     * 
+     *
      * @see #copy()
      * @see #clear()
      */
@@ -613,64 +611,64 @@ public class Selection implements Runnable
         copy();
         clear();
     }
-    
+
     /**
      * Invoked when the rotate clockwise button is pressed or ctrl-R is released.
      * Rotate the contents of this Selection clockwise and adjusts the selected area to the
      *  transformed area.
-     * 
+     *
      * @see Grid#rotateCW(Rectangle)
      */
     public void rotateCW()
     {
         selection = grid.rotateCW(getSelected());
     }
-    
+
     /**
      * Invoked when the rotate counter-clockwise button is pressed or ctrl-R is released.
      * Rotate the contents of this Selection counter-clockwise and adjusts the selected area to the
      *  transformed area.
-     * 
+     *
      * @see Grid#rotateCCW(Rectangle)
      */
     public void rotateCCW()
     {
         selection = grid.rotateCCW(getSelected());
     }
-    
+
     /**
      * Invoked when the clear button is pressed or ctrl-D is released.
      * Clears the selected area of living cells.
-     * 
+     *
      * @see Grid#clear(Rectangle))
      */
     public void clear()
     {
         grid.clear(getSelected());
     }
-    
+
     /**
      * Invoked when the square button is pressed.
      * Creates a rectangle out of the border of the selection.
-     * 
+     *
      * @see Grid#square(Rectangle)
      */
     public void square()
     {
         grid.square(getSelected());
     }
-    
+
     /**
      * Invoked when the circle button is pressed.
      * Creates an oval inside of the selection.
-     * 
+     *
      * @see Grid#oval(Rectangle)
      */
     public void oval()
     {
         grid.oval(getSelected());
     }
-    
+
     /**
      * Invoked when the minimize button is pressed.
      * Minimizes or unminimizes the toolbar, hiding all but the minimize and close buttons when
@@ -687,7 +685,7 @@ public class Selection implements Runnable
             toolbarState = ToolbarState.MOVING_IN;
         }
     }
-    
+
     /**
      * Closes the selection, removing it entirely.
      */
@@ -696,11 +694,11 @@ public class Selection implements Runnable
         selection = null;
         created = false;
     }
-    
+
     /**
      * Draws the selection area onto the given graphics context.
      * This should be called by the enclosing {@link Grid} every draw cycle.
-     * 
+     *
      * @param g - the graphics context
      */
     public synchronized void draw(Graphics2D g)
@@ -712,14 +710,14 @@ public class Selection implements Runnable
             double y = selection.getY();
             double width = selection.getWidth();
             double height = selection.getHeight();
-            
+
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                     RenderingHints.VALUE_ANTIALIAS_ON);
-            
+
             final double selectionWidth = Math.max(0.5, Math.sqrt(grid.zoom/5));
             final double selectionBorderWidth = selectionWidth/3;
             final double handleSize = Math.max(5.5, Selection.handleSize*grid.zoom/50);
-            
+
             // draw the toolbar
             if (toolbarPos > 0)
             {
@@ -727,15 +725,15 @@ public class Selection implements Runnable
                 final int arc = 10;
                 final Color[] colors = { new Color(60, 60, 60), new Color(40, 40, 40, 150) };
                 final float[] dist = { 0.2f, 1 };
-                
+
                 // draw a shadow
                 if (toolbar.height + toolbar.y - y > height)
                 {
                     int fadeSize = (int) Math.max(10, Math.min(width, 18));
-                    
+
                     final float[] sdist = { 0, 1 };
                     final Color[] scolors = { new Color(60, 60, 60), new Color(0, 0, 0, 0) };
-                    
+
                     g.setPaint(new LinearGradientPaint(
                             new Point2D.Double(toolbar.x, toolbar.y),
                             new Point2D.Double(toolbar.x - fadeSize, toolbar.y),
@@ -745,7 +743,7 @@ public class Selection implements Runnable
                             fadeSize,
                             (int)(toolbar.getMaxY() - Math.max(toolbar.y, (int)(y + height))));
                 }
-                
+
                 // draw the toolbar background
                 g.setClip(toolbar.x, toolbar.y, toolbar.width + 1, toolbar.height + 1);
                 g.setPaint(new LinearGradientPaint(
@@ -754,11 +752,11 @@ public class Selection implements Runnable
                         dist, colors));
                 g.fillRoundRect(toolbar.x - arc, toolbar.y,
                         toolbar.width + arc, toolbar.height, arc, arc);
-                
+
                 g.setColor(Color.black);
                 g.drawRoundRect(toolbar.x - arc, toolbar.y,
                         toolbar.width + arc, toolbar.height, arc, arc);
-                
+
                 // draw the buttons
                 saveImg.draw(save.getButton().x, save.getButton().y, g);
                 copyImg.draw(copy.getButton().x, copy.getButton().y, g);
@@ -767,17 +765,17 @@ public class Selection implements Runnable
                 squareImg.draw(square.getButton().x, square.getButton().y, g);
                 circleImg.draw(circle.getButton().x, circle.getButton().y, g);
                 clearImg.draw(clear.getButton().x, clear.getButton().y, g);
-                
+
                 float slideAlpha = (float)toolbarPos;
                 slideOutImg.setTransparency(1 - slideAlpha);
                 slideOutImg.draw(minimize.getButton().x, minimize.getButton().y, g);
                 slideInImg.setTransparency(slideAlpha);
                 slideInImg.draw(minimize.getButton().x, minimize.getButton().y, g);
-                
+
                 closeImg.draw(close.getButton().x, close.getButton().y, g);
-                
+
                 g.setClip(null);
-                
+
                 saveTooltip.draw(g);
                 copyTooltip.draw(g);
                 rotateCWTooltip.draw(g);
@@ -788,7 +786,7 @@ public class Selection implements Runnable
                 minimizeTooltip.draw(g);
                 closeTooltip.draw(g);
             }
-            
+
             // draw the selection
             Area a = new Area(new RoundRectangle2D.Double(
                     x - selectionWidth - selectionBorderWidth,
@@ -803,37 +801,37 @@ public class Selection implements Runnable
                     height - 2*selectionWidth - 2*selectionBorderWidth,
                     3*selectionWidth, 3*selectionWidth)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getCenterX() - grid.x) - 
-                            handleSize/2 - selectionBorderWidth, 
-                    grid.toPixel(this.selection.getMaxY() - grid.y) - 
+                    grid.toPixel(this.selection.getCenterX() - grid.x) -
+                            handleSize/2 - selectionBorderWidth,
+                    grid.toPixel(this.selection.getMaxY() - grid.y) -
                             handleSize/2 - selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getCenterX() - grid.x) - 
-                            handleSize/2 - selectionBorderWidth, 
-                    grid.toPixel(this.selection.getMinY() - grid.y) - 
+                    grid.toPixel(this.selection.getCenterX() - grid.x) -
+                            handleSize/2 - selectionBorderWidth,
+                    grid.toPixel(this.selection.getMinY() - grid.y) -
                             handleSize/2 - selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getMinX() - grid.x) - 
-                            handleSize/2 - selectionBorderWidth, 
-                    grid.toPixel(this.selection.getCenterY() - grid.y) - 
+                    grid.toPixel(this.selection.getMinX() - grid.x) -
+                            handleSize/2 - selectionBorderWidth,
+                    grid.toPixel(this.selection.getCenterY() - grid.y) -
                             handleSize/2 - selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getMaxX() - grid.x) - 
-                            handleSize/2 - selectionBorderWidth, 
-                    grid.toPixel(this.selection.getCenterY() - grid.y) - 
+                    grid.toPixel(this.selection.getMaxX() - grid.x) -
+                            handleSize/2 - selectionBorderWidth,
+                    grid.toPixel(this.selection.getCenterY() - grid.y) -
                             handleSize/2 - selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth,
                     handleSize + 2*selectionBorderWidth)));
-            
+
             g.setColor(selectionBorderColor);
             g.fill(a);
-            
+
             a = new Area(new RoundRectangle2D.Double(
                     x - selectionWidth, y - selectionWidth,
                     width + 2*selectionWidth, height + 2*selectionWidth,
@@ -843,30 +841,30 @@ public class Selection implements Runnable
                     width - 2*selectionWidth, height - 2*selectionWidth,
                     3*selectionWidth, 3*selectionWidth)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getCenterX() - grid.x) - handleSize/2, 
+                    grid.toPixel(this.selection.getCenterX() - grid.x) - handleSize/2,
                     grid.toPixel(this.selection.getMaxY() - grid.y) - handleSize/2,
                     handleSize, handleSize)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getCenterX() - grid.x) - handleSize/2, 
+                    grid.toPixel(this.selection.getCenterX() - grid.x) - handleSize/2,
                     grid.toPixel(this.selection.getMinY() - grid.y) - handleSize/2,
                     handleSize, handleSize)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getMaxX() - grid.x) - handleSize/2, 
+                    grid.toPixel(this.selection.getMaxX() - grid.x) - handleSize/2,
                     grid.toPixel(this.selection.getCenterY() - grid.y) - handleSize/2,
                     handleSize, handleSize)));
             a.add(new Area(new Ellipse2D.Double(
-                    grid.toPixel(this.selection.getMinX() - grid.x) - handleSize/2, 
+                    grid.toPixel(this.selection.getMinX() - grid.x) - handleSize/2,
                     grid.toPixel(this.selection.getCenterY() - grid.y) - handleSize/2,
                     handleSize, handleSize)));
-            
+
             g.setColor(selectionColor);
             g.fill(a);
-            
+
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                     RenderingHints.VALUE_ANTIALIAS_OFF);
         }
     }
-    
+
     private enum ToolbarState
     {
         OUT,
@@ -874,7 +872,7 @@ public class Selection implements Runnable
         MOVING_IN,
         IN;
     }
-    
+
     private enum Direction
     {
         NONE,

@@ -20,32 +20,30 @@ import javax.swing.JPanel;
  * Handles launching the Game of Life simulation, running it in a rendering loop, and exiting.
  * This class also contains the main components of the game, such as the {@link Grid} that holds
  *  the state of the simulation and {@link Toolbar} that contains most of the interface.
- * 
- * @author zirbinator
  */
 public class GameOfLife
 {
     private ControlBar controlBar;
-    
+
     private Diagnostics diagnostics;
-    
+
     private static GameOfLife GoL;
     private Grid grid;
-    
+
     private JFrame frame;
-    
+
     /**
      * The amount of time taken each render loop in milliseconds.
-     * That is, after the 
+     * That is, after the
      */
     public static final long period = 20;
-    
+
     private Toolbar toolbar;
-    
+
     /**
      * The main method of the program.
      * A new GameOfLife object is instantiated and launched.
-     * 
+     *
      * @param args - command-line arguments, ignored
      * @see #run()
      */
@@ -54,7 +52,7 @@ public class GameOfLife
         GoL = new GameOfLife();
         GoL.run();
     }
-    
+
     /**
      * Runs the Game of Life.
      * First a full-screen exclusive window is created with the {@link DisplayMonitor}.
@@ -65,18 +63,18 @@ public class GameOfLife
     {
         frame = DisplayMonitor.createFrame("Game of Life", new Panel());
         frame.setIconImage(ImageLoader.loadImage("icon"));
-        
+
         diagnostics = new Diagnostics();
         grid = new Grid();
         toolbar = new Toolbar();
         controlBar = new ControlBar();
-        
+
         long drawStart;
         long drawEnd;
         long renderEnd;
         long sleepTime;
         BufferStrategy strategy;
-        
+
         while (true)
         {
             drawStart = System.nanoTime();
@@ -87,13 +85,13 @@ public class GameOfLife
             g.dispose();
             // end "draw"
             drawEnd = System.nanoTime();
-            
+
             // begin "render"
             strategy.show();
             Toolkit.getDefaultToolkit().sync();
             // end "render"
             renderEnd = System.nanoTime();
-            
+
             sleepTime = period - (System.nanoTime() - drawStart)/1000000;
             if (sleepTime <= 0)
             {
@@ -111,42 +109,42 @@ public class GameOfLife
                     ex.printStackTrace();
                 }
             }
-            
+
             diagnostics.record(drawEnd - drawStart, renderEnd - drawEnd,
                     System.nanoTime() - renderEnd, System.nanoTime() - drawStart, sleepTime <= 0);
         }
     }
-    
+
     /**
      * Gets the {@link Grid} object holding the state of the simulation.
-     * 
+     *
      * @return the {@link Grid} used by this Game of Life
      */
     public static Grid getGrid()
     {
         return GoL.grid;
     }
-    
+
     /**
      * Gets the {@link Toolbar} object responsible for the majority of the interface.
-     * 
+     *
      * @return the {@link Toolbar} used by this Game of Life
      */
     public static Toolbar getToolbar()
     {
         return GoL.toolbar;
     }
-    
+
     /**
      * Gets the {@link ControlBar} object responsible for closing and minimizing the window.
-     * 
+     *
      * @return the {@link ControlBar} used by this Game of Life
      */
     public static ControlBar getControlBar()
     {
         return GoL.controlBar;
     }
-    
+
     /**
      * Minimizes the window containing this Game of Life.
      */
@@ -154,7 +152,7 @@ public class GameOfLife
     {
         GoL.frame.setState(Frame.ICONIFIED);
     }
-    
+
     /**
      * Determines whether the given event should be consumed for the given object.
      * That is, this method checks whether objects "higher" in the notification chain are using
@@ -166,7 +164,7 @@ public class GameOfLife
      * If the {@link ControlBar} has consumed the event, true would be returned, and the
      *  {@link Toolbar} should not handle it, otherwise false would be returned, and the
      *  {@link Toolbar} may handle it.
-     * 
+     *
      * @param e - the event that may or may not be handled
      * @param o - the object that may or may not handle the event (should be <code>this</code> in
      *  most cases)
@@ -189,12 +187,12 @@ public class GameOfLife
         }
         return true;
     }
-    
+
     /**
      * Exits the Game of Life program.
      * Exiting diagnostic information is printed and then a call to <code>System.exit(0)</code> is
      *  made.
-     * 
+     *
      * @see Diagnostics#printExitInfo()
      * @see System#exit(int);
      */
@@ -203,10 +201,10 @@ public class GameOfLife
         GoL.diagnostics.printExitInfo();
         System.exit(0);
     }
-    
+
     /**
      * Draws the Game of Life on the given graphics context.
-     * 
+     *
      * @param g - the graphics context of the screen or any buffers
      */
     private void draw(Graphics2D g)
@@ -220,17 +218,15 @@ public class GameOfLife
         g.setComposite(c);
         diagnostics.draw(g);
     }
-    
+
     /**
      * A lightweight panel that allows for more operating-system compatibility, such as
      *  screenshots when it is applied to the full-screen window.
-     * 
-     * @author zirbinator
      */
     private class Panel extends JPanel
     {
         private static final long serialVersionUID = 1L;
-        
+
         public void paintComponent(Graphics g)
         {
             try

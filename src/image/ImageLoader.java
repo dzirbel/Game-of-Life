@@ -11,8 +11,6 @@ import graphics.AcceleratedImage;
  * Provides utility functions for loading images.
  * Images are loaded as resources of this class so that they can be easily packaged in a JAR
  *  without the need of external folders or resources.
- * 
- * @author zirbinator
  */
 public class ImageLoader
 {
@@ -20,7 +18,7 @@ public class ImageLoader
      * Loads the image with the given name.
      * The name may end with an extension (typically .png or .jpg); if it does not, .png will be
      *  appended.
-     * 
+     *
      * @param name - the name of the image to load
      * @return the loaded image, or null if there was an error loading the image
      * @see AcceleratedImage#AcceleratedImage(java.io.InputStream)
@@ -43,12 +41,12 @@ public class ImageLoader
         }
         return null;
     }
-    
+
     /**
      * Loads the image with the given name and quality.
      * The name may end with an extension (typically .png or .jpg); if it does not, .png will be
      *  appended.
-     * 
+     *
      * @param name - the name of the image to load
      * @param quality - the quality of the loaded image
      * @return the loaded image, or null if there was an error loading the image
@@ -73,12 +71,12 @@ public class ImageLoader
         }
         return null;
     }
-    
+
     /**
      * Loads the image with the given name.
      * The name may end with an extension (typically .png or .jpg); if it does not, .png will be
      *  appended.
-     * 
+     *
      * @param name - the name of the image to load
      * @return the loaded image, or null if there was an error loading the image
      * @see ImageIO#read(java.io.InputStream)
@@ -101,12 +99,12 @@ public class ImageLoader
         }
         return null;
     }
-    
+
     /**
      * Converts the given name to an appropriate image name.
      * That is, a standard image file extension is appended to the given name if it has no such
      *  extension.
-     * 
+     *
      * @param name - the name for which to find an appropriate image name
      * @return the potential name for the image to be loaded as a resource of this class
      */

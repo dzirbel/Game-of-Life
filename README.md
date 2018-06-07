@@ -1,6 +1,6 @@
 # Game of Life
 
-A desktop simulation of John Conway's Game of Life written in Java, created by Dominic Zirbel [djynth@gmail.com]. This software is open-source and free to use under the GNU General Public License, Version 3 (http://www.gnu.org/licenses/gpl.html).
+A desktop simulation of John Conway's Game of Life written in Java, created by Dominic Zirbel [dominiczirbel@gmail.com]. This software is open-source and free to use under the GNU General Public License, Version 3 (http://www.gnu.org/licenses/gpl.html).
 
 Most graphics are adapted from the "Ultimate Gnome" project, found at: http://code.google.com/p/ultimate-gnome/
 
@@ -47,7 +47,7 @@ Longer-term, I was hoping to implement:
 
 The Game of Life is very simple to install and run. Simply downlaod the latest JAR from the repository and run it. On some Linux/Unix systems, this file may have to be marked as executable bit.
 
-(The JAR is in the [root repository folder](http://www.github.com/djynth/Game-of-Life) named "Game of Life X.X.XX.jar". To download it, click on it and then select "View Raw". I apologize for this inconvenience; github has recently removed Downloads and I have not yet moved to an external host).
+(The JAR is in the [root repository folder](http://www.github.com/dzirbel/Game-of-Life) named "Game of Life X.X.XX.jar". To download it, click on it and then select "View Raw". I apologize for this inconvenience; github has recently removed Downloads and I have not yet moved to an external host).
 
 The only requirement to run the Game of Life is a recent installation of Java (1.5 or later).
 

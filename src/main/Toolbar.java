@@ -30,8 +30,6 @@ import pattern.PatternSelector;
 /**
  * Represents the on-screen toolbar that allows the user to play/pause the simulation, go to the
  *  next generation, clear the simulation, etc.
- * 
- * @author zirbinator
  */
 public class Toolbar implements Runnable
 {
@@ -42,14 +40,14 @@ public class Toolbar implements Runnable
     private AcceleratedImage move;
     private AcceleratedImage img;
     private AffineTransform transform;
-    
+
     private boolean dragging;
     private boolean paused;
     private BufferedImage bi;
     private ButtonListener playButton;
     private ButtonListener nextButton;
     private ButtonListener clearButton;
-    
+
     /**
      * The color of the generation text.
      */
@@ -64,7 +62,7 @@ public class Toolbar implements Runnable
      * The color of the border of the Toolbar.
      */
     public static final Color borderColor = new Color(15, 15, 15);
-    
+
     /**
      * The minimum speed for updates of the simulation while playing in updates/s.
      */
@@ -73,7 +71,7 @@ public class Toolbar implements Runnable
      * The maximum speed for updates of the simulation while playing in updates/s.
      */
     private static final double maxUpdateSpeed = 750;
-    
+
     private float playAlpha  = 1;
     private float pauseAlpha = 0;
     private float paneAlpha  = 1;
@@ -85,10 +83,10 @@ public class Toolbar implements Runnable
     private float[] offsets = new float[4];
     private static final float borderSize = 3.5f;
     private static final Font generationFont = new Font(Font.SANS_SERIF, Font.BOLD, 19);
-    
+
     private static final int width = 400;
     private static final int height = 100;
-    
+
     private static final long period = 25;
     /**
      * The time to fade the play/pause button entirely from play to pause or vice versa in
@@ -100,7 +98,7 @@ public class Toolbar implements Runnable
      *  milliseconds.
      */
     private static final long paneFadeTime = 650;
-    
+
     private PatternSelector patterns;
     private Point dragOrigin;
     private static final Point playPos =  new Point(40,  20);
@@ -109,7 +107,7 @@ public class Toolbar implements Runnable
     private static final Point movePos =  new Point(340, 15);
     private static final Point genPos =   new Point(260, 35);
     private static final Point speedPos = new Point(255, 50);
-    
+
     private Rectangle bounds;
     private Rectangle dotsBounds;
     private RescaleOp rescaler;
@@ -117,15 +115,15 @@ public class Toolbar implements Runnable
     private RollOver nextRO;
     private RollOver clearRO;
     private RollOver moveRO;
-    
+
     private SliderBar speedSlider;
-    
+
     private Tooltip playTooltip;
     private Tooltip nextTooltip;
     private Tooltip clearTooltip;
     private Tooltip moveTooltip;
     private TooltipTheme tooltipTheme;
-    
+
     /**
      * Creates a new Toolbar at the default location and settings.
      */
@@ -136,7 +134,7 @@ public class Toolbar implements Runnable
         next = ImageLoader.load("next");
         clear = ImageLoader.load("stop");
         move = ImageLoader.load("move");
-        
+
         Listener.requestNotification(this, "mousePressed",
                 Listener.TYPE_MOUSE_PRESSED, Listener.CODE_BUTTON1);
         Listener.requestNotification(this, "mouseReleased",
@@ -145,14 +143,14 @@ public class Toolbar implements Runnable
                 Listener.TYPE_MOUSE_DRAGGED, Listener.CODE_BUTTON1);
         Listener.requestNotification(this, "keyPressed",
                 Listener.TYPE_KEY_PRESSED, Listener.CODE_KEY_ALL);
-        
+
         bounds = new Rectangle(DisplayMonitor.screen.width - width - DisplayMonitor.screen.width/20,
                 DisplayMonitor.screen.height - height - DisplayMonitor.screen.height/30,
                 width, height);
-        
+
         dragging = false;
         paused = true;
-        
+
         try
         {
             playButton = new ButtonListener(null, "pause", this);
@@ -163,7 +161,7 @@ public class Toolbar implements Runnable
         {
             ex.printStackTrace();
         }
-        
+
         speedSlider = new SliderBar(null);
         tooltipTheme = new TooltipTheme();
         playTooltip = new Tooltip("Play/Pause [P]", playButton.getButton(), tooltipTheme);
@@ -173,40 +171,40 @@ public class Toolbar implements Runnable
         moveTooltip = new Tooltip("Drag to Move the Toolbar", dotsBounds, tooltipTheme);
         speedSlider.setTooltip(new Tooltip("Adjust the speed of the simulation",
                 null, tooltipTheme));
-        
+
         playRO = new RollOver(new Rectangle(), 3);
         nextRO = new RollOver(new Rectangle(), 3);
         clearRO = new RollOver(new Rectangle(), 3);
         moveRO = new RollOver(new Rectangle(), 7);
-        
+
         setBounds();
-        
+
         patterns = new PatternSelector(this);
-        
+
         new Thread(this).start();
         new Thread(new GridUpdater()).start();
     }
-    
+
     /**
      * Gets the boundaries of this Toolbar on the screen.
-     * 
+     *
      * @return the boundaries of this Toolbar on the screen, in pixels
      */
     public Rectangle getBounds()
     {
         return (Rectangle) bounds.clone();
     }
-    
+
     /**
      * Gets the size of the arc used to draw the background rounded rectangle.
-     * 
+     *
      * @return the diameter of the rounded corners of this Toolbar, in pixels
      */
     public int getArc()
     {
         return 3*bounds.height/4;
     }
-    
+
     /**
      * Resets the sub-boundaries of the Toolbar based on the current location of the Toolbar.
      * That is, areas such as the location of the play button (and its roll-over and tooltip) as
@@ -222,7 +220,7 @@ public class Toolbar implements Runnable
                 clear.getWidth(), clear.getHeight()));
         dotsBounds = new Rectangle(bounds.x + movePos.x, bounds.y + movePos.y,
                 move.getWidth(), move.getHeight());
-        
+
         playTooltip.setHoverArea(playButton.getButton());
         nextTooltip.setHoverArea(nextButton.getButton());
         clearTooltip.setHoverArea(clearButton.getButton());
@@ -231,13 +229,13 @@ public class Toolbar implements Runnable
         nextRO.setBounds(nextButton.getButton());
         clearRO.setBounds(clearButton.getButton());
         moveRO.setBounds(dotsBounds);
-        
+
         speedSlider.setLocation(new Point(bounds.x + speedPos.x, bounds.y + speedPos.y));
     }
-    
+
     /**
      * Runs the Toolbar; simply updates the alpha faders.
-     * 
+     *
      * @see Runnable#run()
      */
     public void run()
@@ -246,7 +244,7 @@ public class Toolbar implements Runnable
         while (true)
         {
             long elapsed = (System.nanoTime() - lastUpdate)/1000000;
-            
+
             if (paused)
             {
                 pauseAlpha = Math.max(pauseAlpha - (float) elapsed/playFadeTime, 0f);
@@ -265,7 +263,7 @@ public class Toolbar implements Runnable
             {
                 paneAlpha = Math.min(paneAlpha + (float) elapsed/paneFadeTime, 1f);
             }
-            
+
             lastUpdate = System.nanoTime();
             try
             {
@@ -277,7 +275,7 @@ public class Toolbar implements Runnable
             }
         }
     }
-    
+
     /**
      * Changes the pause state of this Toolbar.
      */
@@ -285,7 +283,7 @@ public class Toolbar implements Runnable
     {
         paused = !paused;
     }
-    
+
     /**
      * Moves to the next generation.
      * Equivalent to the statement
@@ -297,7 +295,7 @@ public class Toolbar implements Runnable
     {
         GameOfLife.getGrid().update();
     }
-    
+
     /**
      * Clears the grid and automatically pauses the simulation.
      */
@@ -306,10 +304,10 @@ public class Toolbar implements Runnable
         GameOfLife.getGrid().clear();
         paused = true;
     }
-    
+
     /**
      * Invoked when the left mouse button is pressed.
-     * 
+     *
      * @param e - the triggering event
      */
     public void mousePressed(MouseEvent e)
@@ -324,10 +322,10 @@ public class Toolbar implements Runnable
             }
         }
     }
-    
+
     /**
      * Invoked when the left mouse button is released.
-     * 
+     *
      * @param e - the triggering event
      */
     public void mouseReleased(MouseEvent e)
@@ -335,10 +333,10 @@ public class Toolbar implements Runnable
         dragging = false;
         moveTooltip.setVisible(false);
     }
-    
+
     /**
      * Invoked when the left mouse button is dragged (pressed and moved).
-     * 
+     *
      * @param e - the triggering event
      */
     public void mouseDragged(MouseEvent e)
@@ -349,11 +347,11 @@ public class Toolbar implements Runnable
             int y = bounds.y;
             int prevX = bounds.x;
             int prevY = bounds.y;
-            
+
             x = e.getX() - dragOrigin.x;
             y = e.getY() - dragOrigin.y;
-            
-            if (x + width > DisplayMonitor.screen.width - GameOfLife.getControlBar().getBounds().width && 
+
+            if (x + width > DisplayMonitor.screen.width - GameOfLife.getControlBar().getBounds().width &&
                     y < GameOfLife.getControlBar().getBounds().height)
             {
                 if (prevX + width > DisplayMonitor.screen.width - GameOfLife.getControlBar().getBounds().width)
@@ -365,18 +363,18 @@ public class Toolbar implements Runnable
                     x = DisplayMonitor.screen.width - GameOfLife.getControlBar().getBounds().width - width;
                 }
             }
-            
+
             bounds.x = Math.max(0, Math.min(DisplayMonitor.screen.width - width, x));
             bounds.y = Math.max(0, Math.min(DisplayMonitor.screen.height - height, y));
-            
+
             setBounds();
             patterns.onResize();
         }
     }
-    
+
     /**
      * Invoked when a key is pressed.
-     * 
+     *
      * @param e - the triggering event
      */
     public void keyPressed(KeyEvent e)
@@ -408,12 +406,12 @@ public class Toolbar implements Runnable
             }
         }
     }
-    
+
     /**
      * Determines whether the Toolbar should consume the given event.
      * If it is consumed, component of the interface with lower priority than the Toolbar should
      *  not handle it.
-     * 
+     *
      * @param e - the event to be consumed
      * @return true if the Toolbar should consume this event, false otherwise
      */
@@ -425,10 +423,10 @@ public class Toolbar implements Runnable
         }
         return false;
     }
-    
+
     /**
      * Draws the Toolbar on the given graphics context.
-     * 
+     *
      * @param g - the graphics context
      */
     public void draw(Graphics2D g)
@@ -438,14 +436,14 @@ public class Toolbar implements Runnable
                 (int) (bounds.width - borderSize), (int) (bounds.height - borderSize),
                getArc(), getArc())));
         g.setClip(a);
-        
+
         patterns.draw(paneAlpha, g);
-        
+
         g.setClip(null);
-        
+
         img = new AcceleratedImage(bounds.width, bounds.height);
         Graphics2D gImg = (Graphics2D) img.getContents().getGraphics();
-        
+
         gImg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         float[] fractions = { 0, 1 };
         Color[] colors = { backgroundColor, darkBackgroundColor };
@@ -455,12 +453,12 @@ public class Toolbar implements Runnable
                 fractions, colors));
         gImg.fill(new RoundRectangle2D.Double(borderSize/2, borderSize/2,
                 bounds.width - borderSize, bounds.height - borderSize, getArc(), getArc()));
-        
+
         gImg.setStroke(new BasicStroke(borderSize));
         gImg.setColor(borderColor);
         gImg.draw(new RoundRectangle2D.Double(borderSize/2, borderSize/2,
                 bounds.width - borderSize, bounds.height - borderSize, getArc(), getArc()));
-        
+
         transform = new AffineTransform();
         transform.setToTranslation(-bounds.x, -bounds.y);
         gImg.setTransform(transform);
@@ -472,7 +470,7 @@ public class Toolbar implements Runnable
         next.draw(nextButton.getButton().x, nextButton.getButton().y, gImg);
         clear.draw(clearButton.getButton().x, clearButton.getButton().y, gImg);
         speedSlider.draw(gImg);
-        
+
         if (pauseAlpha > 0)
         {
             bi = new BufferedImage(pause.getWidth(), pause.getHeight(),
@@ -482,7 +480,7 @@ public class Toolbar implements Runnable
             rescaler = new RescaleOp(scales, offsets, null);
             gImg.drawImage(bi, rescaler, playButton.getButton().x, playButton.getButton().y);
         }
-        
+
         if (playAlpha > 0)
         {
             bi = new BufferedImage(play.getWidth(), play.getHeight(),
@@ -493,7 +491,7 @@ public class Toolbar implements Runnable
             gImg.drawImage(bi, rescaler, playButton.getButton().x, playButton.getButton().y);
         }
         gImg.setTransform(new AffineTransform());
-        
+
         gImg.setColor(generationShadowColor);
         gImg.setFont(generationFont);
         gImg.drawString(new Integer(GameOfLife.getGrid().getGeneration()).toString(),
@@ -501,27 +499,27 @@ public class Toolbar implements Runnable
         gImg.setColor(generationColor);
         gImg.drawString(new Integer(GameOfLife.getGrid().getGeneration()).toString(),
                 genPos.x, genPos.y);
-        
+
         gImg.dispose();
-        
+
         img.setTransparency(paneAlpha);
         img.validate(g);
         img.draw(bounds.x, bounds.y, g);
-        
+
         speedSlider.drawTooltip(g);
         playTooltip.draw(g);
         nextTooltip.draw(g);
         clearTooltip.draw(g);
         moveTooltip.draw(g);
     }
-    
+
     /**
      * Draws diagnostics information in the given rectangular area.
      * Note that the information is not guaranteed (or clipped) to the given area, in fact, some
      *  text is guaranteed to be drawn to the left and above the area.
      * The text inside the area is also not shortened or cropped if the area is small.
      * The font currently used by the graphics context is used to draw the diagnostic text.
-     * 
+     *
      * @param g - the graphics context
      * @param area - the area in which diagnostic information should be drawn
      */
@@ -530,18 +528,18 @@ public class Toolbar implements Runnable
         g.setColor(Diagnostics.border);
         g.drawRect(area.x, area.y, area.width, area.height);
         g.drawString("Toolbar Information", area.x, area.y - 2);
-        
+
         g.drawString("x: " + Diagnostics.df.format(bounds.x) + " [px]", area.x + 5, area.y + 20);
         g.drawString("y: " + Diagnostics.df.format(bounds.y) + " [px]", area.x + 5, area.y + 40);
-        
+
         g.drawString("Playing:  " + !paused, area.x + 5, area.y + 60);
         g.drawString("Dragging: " + dragging, area.x + 5, area.y + 80);
-        
+
         g.drawString("Speed:  " + Diagnostics.df.format(getSpeed()) + " [updates/s]",
                 area.x + 5, area.y + 100);
         g.drawString("Period: " + getPeriod() + " [ms]", area.x + 5, area.y + 120);
     }
-    
+
     /**
      * Gets the current update speed based on the speed slider's position.
      * The update speed is in the interval
@@ -552,7 +550,7 @@ public class Toolbar implements Runnable
      * <pre>
      * minUpdateSpeed + (maxUpdateSpeed - minUpdateSpeed + 1)^((sliderPos - (-1))/(1 - (-1))) - 1
      * </pre>
-     * 
+     *
      * @return the speed at which the simulation should be updated (if playing) in updates/s
      * @see #getPeriod()
      */
@@ -561,14 +559,14 @@ public class Toolbar implements Runnable
         return minUpdateSpeed + Math.pow(maxUpdateSpeed - minUpdateSpeed + 1,
                 (speedSlider.getPosition() + 1)/2) - 1;
     }
-    
+
     /**
      * Gets the current period for the simulation updates based on the current speed.
      * This is simply the inverse of the current speed, converted to milliseconds:
      * <pre>
      * (1/getSpeed())*1000
      * </pre>
-     * 
+     *
      * @return the time between updates for the simulation updater in milliseconds
      * @see #getSpeed()
      */
@@ -576,12 +574,10 @@ public class Toolbar implements Runnable
     {
         return (long) (1000.0/getSpeed());
     }
-    
+
     /**
      * Updates the {@link Grid} continuously while the simulation is playing.
      * A GridUpdater should be run in a separated Thread and will automatically update the Grid.
-     * 
-     * @author zirbinator
      */
     private class GridUpdater implements Runnable
     {
@@ -595,7 +591,7 @@ public class Toolbar implements Runnable
                     lastUpdate = System.nanoTime();
                     GameOfLife.getGrid().update();
                 }
-                
+
                 try
                 {
                     Thread.sleep(1);
